@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Firewall Testkit</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <span class="kicker" data-i18n="kicker"></span>
+    <h1 data-i18n="title"></h1>
+  </div>
+  <nav class="tabs">
+    <button class="tab on" data-tab="tests" data-i18n="tab_tests"></button>
+    <button class="tab" data-tab="settings" data-i18n="tab_settings"></button>
+    <span class="lang"><button data-lang="en">EN</button><button data-lang="es">ES</button></span>
+  </nav>
+</header>
+
+<div id="view-tests">
+  <section class="bar">
+    <div class="agents">
+      <span class="lbl" data-i18n="clients"></span>
+      <div id="agents" class="chips"></div>
+    </div>
+    <div class="actions">
+      <input id="q" type="search">
+      <span id="selinfo" class="muted"></span>
+      <button id="runsel" class="btn" data-i18n="run_sel"></button>
+      <button id="runall" class="btn primary" data-i18n="run_all"></button>
+    </div>
+  </section>
+  <main class="layout">
+    <nav id="toc" class="toc"></nav>
+    <section id="cases" class="cases"></section>
+    <aside class="runs">
+      <h2 data-i18n="runs"></h2>
+      <p class="muted small" data-i18n="runs_help"></p>
+      <div id="runs"></div>
+    </aside>
+  </main>
+</div>
+
+<div id="view-settings" hidden>
+  <main class="settings">
+    <p class="muted" data-i18n="set_intro"></p>
+    <section class="card">
+      <h2 data-i18n="set_envs"></h2>
+      <p class="muted small" data-i18n="set_envs_help"></p>
+      <table class="grid" id="envs"><thead><tr><th data-i18n="col_name"></th><th data-i18n="col_ip"></th><th>AZ</th><th data-i18n="col_desc"></th><th data-i18n="col_server"></th><th data-i18n="col_peer"></th><th></th></tr></thead><tbody></tbody></table>
+      <button class="btn sm" id="addenv" data-i18n="add_env"></button>
+    </section>
+    <section class="card">
+      <h2 data-i18n="set_matrix"></h2>
+      <p class="muted small" data-i18n="set_matrix_help"></p>
+      <div id="matrix"></div>
+      <p class="small"><span data-i18n="always"></span> <span id="always"></span></p>
+    </section>
+    <section class="card">
+      <h2 data-i18n="set_roles"></h2>
+      <p class="muted small" data-i18n="set_roles_help"></p>
+      <div id="roles" class="form"></div>
+    </section>
+    <section class="card">
+      <h2 data-i18n="set_internet"></h2>
+      <p class="muted small" data-i18n="set_internet_help"></p>
+      <div id="internet" class="form"></div>
+    </section>
+    <section class="card">
+      <h2>JSON</h2>
+      <p class="muted small" data-i18n="set_json_help"></p>
+      <textarea id="json" rows="12" spellcheck="false"></textarea>
+      <button class="btn sm" id="applyjson" data-i18n="apply_json"></button>
+    </section>
+    <div class="savebar"><span id="savemsg" class="muted"></span><button class="btn" id="reload" data-i18n="discard"></button><button class="btn primary" id="save" data-i18n="save"></button></div>
+  </main>
+</div>
+
+<template id="tpl-case">
+  <article class="case">
+    <header>
+      <label class="ck"><input type="checkbox" class="case-ck"></label>
+      <div class="ttl"><span class="cid"></span><h3></h3></div>
+      <div class="badges"></div>
+      <button class="btn sm run-case"></button>
+    </header>
+    <div class="body">
+      <div class="cols">
+        <div><h4 class="h-obj"></h4><p class="obj"></p><h4 class="h-req"></h4><p class="req"></p></div>
+        <div><h4 class="h-how"></h4><p class="how"></p><p class="evi"></p></div>
+      </div>
+      <table class="checks"><thead><tr><th></th><th class="th-test"></th><th class="th-exp"></th><th class="th-res"></th><th></th></tr></thead><tbody></tbody></table>
+    </div>
+  </article>
+</template>
+<script src="static/app.js"></script>
+</body>
+</html>

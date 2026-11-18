@@ -1,0 +1,43 @@
+{
+  "server_env": "comm",
+  "environments": [
+    {"name": "pro",  "ip": "10.0.0.92", "az": "b", "description": "Production"},
+    {"name": "pre",  "ip": "10.1.0.50", "az": "a", "description": "Pre-production"},
+    {"name": "dev",  "ip": "10.2.0.84", "az": "b", "description": "Development"},
+    {"name": "comm", "ip": "10.3.0.6",  "az": "a", "description": "Shared services (test server)"}
+  ],
+  "segmentation": {
+    "allow": {
+      "pre>dev": ["icmp", "http", "https", "ssh"],
+      "dev>pre": ["icmp", "http", "https", "ssh"],
+      "pro>comm": ["icmp", "http", "https"],
+      "pre>comm": ["icmp", "http", "https"],
+      "dev>comm": ["icmp", "http", "https"]
+    },
+    "always": ["iperf3"]
+  },
+  "roles": {
+    "prod_envs": ["pro"],
+    "nonprod_envs": ["pre", "dev"],
+    "ids_target": "dev",
+    "ids_clients": ["pre"],
+    "ips_exception_client": "pro",
+    "dlp_exception_client": "dev",
+    "precedence_target": "pro",
+    "precedence_clients": ["pre", "dev"]
+  },
+  "peers": {"pre": "dev", "dev": "pre", "pro": "comm"},
+  "internet": {
+    "allowed_site": "www.example.com",
+    "allowed_business_site": "www.checkpoint.com",
+    "blocked_fqdn": "www.example.org",
+    "blocked_path": "/testkit-blocked",
+    "geo_blocked_url": "http://yandex.ru/",
+    "financial_site": "www.bbva.es",
+    "inspected_site": "www.wikipedia.org",
+    "port_test_host": "portquiz.net",
+    "dns_resolver": "1.1.1.1",
+    "exception_port": 5201
+  },
+  "inspection_ca_match": "HTTPS Inspection"
+}

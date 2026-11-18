@@ -1,0 +1,33 @@
+# Firewall Testkit. Host networking: tests leave from the VM's workload IP and cross the firewall.
+#   Server (shared-services VM):  docker compose --profile server up -d   → http://<IP>/portal/
+#   Client (each environment):    docker compose --profile client up -d   (portal agent)
+#   CLI run:                      docker compose run --rm client run IPS-01 TLS-05
+# Settings in .env (see .env.example); targets and roles are configured in the portal (Settings).
+services:
+  server:
+    image: ${TESTKIT_IMAGE:-ghcr.io/gdiaz777/cloud-firewall-testkit:latest}
+    build: .
+    profiles: ["server"]
+    command: ["server"]
+    network_mode: host
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./certs:/opt/testkit/certs:ro
+      - portal-data:/data
+  client:
+    image: ${TESTKIT_IMAGE:-ghcr.io/gdiaz777/cloud-firewall-testkit:latest}
+    build: .
+    profiles: ["client"]
+    command: ["client"]
+    network_mode: host
+    cap_add: [NET_RAW, NET_ADMIN]
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./certs/inspection_ca.crt:/opt/testkit/certs/inspection_ca.crt:ro
+      - ./certs/client.crt:/opt/testkit/certs/client.crt:ro
+      - ./certs/client.key:/opt/testkit/certs/client.key:ro
+      - ./certs/testkit_ca.crt:/opt/testkit/certs/testkit_ca.crt:ro
+volumes:
+  portal-data:
