@@ -24,20 +24,22 @@ rule_exists() { cp "show-${1}-rule" "{\"name\":\"$3\",\"layer\":\"$2\"}" | jq -e
 log "Objects"
 for e in $(lab '.environments[].name'); do
   c=$(lab --arg e "$e" '.environments[]|select(.name==$e).cidr')
-  exists network "TK_$e" || api add-network "{\"name\":\"TK_$e\",\"subnet\":\"${c%/*}\",\"mask-length\":${c#*/},$TAGS}"
+  exists network "TK_$e" || api add-network "{\"name\":\"TK_$e\",\"subnet\":\"${c%/*}\",\"mask-length\":${c#*/},\"ignore-warnings\":true,$TAGS}"
 done
-G=$(lab -c '[.environments[].name|"TK_"+.]')
-exists group TK_Envs && api set-group "{\"name\":\"TK_Envs\",\"members\":$G}" || api add-group "{\"name\":\"TK_Envs\",\"members\":$G,$TAGS}"
-exists network TK_Internal || api add-network "{\"name\":\"TK_Internal\",\"subnet\":\"${INTERNAL%/*}\",\"mask-length\":${INTERNAL#*/},$TAGS}"
+ENVS_JSON=$(lab -c '[.environments[].name|"TK_"+.]')
+exists group TK_Envs && api set-group "{\"name\":\"TK_Envs\",\"members\":$ENVS_JSON}" || api add-group "{\"name\":\"TK_Envs\",\"members\":$ENVS_JSON,$TAGS}"
+exists network TK_Internal || api add-network "{\"name\":\"TK_Internal\",\"subnet\":\"${INTERNAL%/*}\",\"mask-length\":${INTERNAL#*/},\"ignore-warnings\":true,$TAGS}"
 P=$(lab '.internet.exception_port // 5201')
-exists service-tcp TK_exception_port || api add-service-tcp "{\"name\":\"TK_exception_port\",\"port\":\"$P\",$TAGS}"
-exists service-tcp TK_http_sig  || api add-service-tcp "{\"name\":\"TK_http_sig\",\"port\":\"80\",\"protocol\":\"HTTP\",\"match-by-protocol-signature\":true,$TAGS}"
-exists service-tcp TK_https_sig || api add-service-tcp "{\"name\":\"TK_https_sig\",\"port\":\"443\",\"protocol\":\"ENC-HTTP\",\"match-by-protocol-signature\":true,$TAGS}"
+exists service-tcp TK_exception_port || api add-service-tcp "{\"name\":\"TK_exception_port\",\"port\":\"$P\",\"ignore-warnings\":true,$TAGS}"
+exists service-tcp TK_http_sig  || api add-service-tcp "{\"name\":\"TK_http_sig\",\"ignore-warnings\":true,\"port\":\"80\",\"protocol\":\"HTTP\",\"match-by-protocol-signature\":true,$TAGS}"
+exists service-tcp TK_https_sig || api add-service-tcp "{\"name\":\"TK_https_sig\",\"ignore-warnings\":true,\"port\":\"443\",\"protocol\":\"ENC-HTTP\",\"match-by-protocol-signature\":true,$TAGS}"
 site() { exists application-site "$1" || api add-application-site "$(jq -nc --arg n "$1" --argjson u "$2" '{name:$n, "primary-category":"Custom_Application_Site", "url-list":$u, "urls-defined-as-regular-expression":false, tags:["firewall-testkit"]}')"; }
 site TK_Blocked_FQDN "$(lab -c '[.internet.blocked_fqdn, (.internet.blocked_fqdn|sub("^www\\.";""))]')"
 site TK_Blocked_Path "$(lab -c '[.internet.allowed_site + .internet.blocked_path]')"
 site TK_NoDecrypt '["nodecrypt.testkit.lab","mtls.testkit.lab"]'
-cp update-updatable-objects-repository-content '{}' >/dev/null
+# The repository update is asynchronous: wait for it (first run on a new management initializes it)
+api update-updatable-objects-repository-content '{}' >/dev/null
+for i in $(seq 1 24); do cp show-updatable-objects-repository-content '{"limit":1}' | jq -e '.objects|length>0' >/dev/null 2>&1 && break; sleep 5; done
 uo() { exists updatable-object "$1" && return 0
   local u; u=$(cp show-updatable-objects-repository-content "{\"filter\":{\"text\":\"$1\"},\"limit\":20}" | jq -r --arg n "$1" '[.objects[]?|select(."name-in-updatable-objects-repository"|ascii_downcase==($n|ascii_downcase))][0]."uid-in-updatable-objects-repository" // empty')
   [ -n "$u" ] && api add-updatable-object "{\"uid-in-updatable-objects-repository\":\"$u\"}" || warn "updatable object not found: $1"; }
@@ -97,7 +99,7 @@ api set-threat-protection "{\"name\":\"SQL Servers Blind SQL Injection Technique
 log "Threat Prevention rules ($TPL)"
 TRB() { cp show-threat-rulebase "{\"name\":\"$TPL\",\"limit\":50}" | jq -c '[.rulebase[] | if .type=="threat-section" then .rulebase[] else . end]'; }
 HAS() { TRB | jq -e --arg n "$1" 'map(select(.name==$n))|length>0' >/dev/null; }
-FIRST=$(TRB | jq -r 'map(select(.name!="TK rest of traffic" and (.name|startswith("TK ")|not)))[0].uid // empty')
+FIRST=$(TRB | jq -r 'map(select((.name // "") | startswith("TK ") | not))[0].uid // empty')
 [ -n "$FIRST" ] && api set-threat-rule "{\"uid\":\"$FIRST\",\"layer\":\"$TPL\",\"new-name\":\"TK rest of traffic\",\"action\":\"$ST\",\"track\":\"Log\"}"
 HAS "TK Internet" || api add-threat-rule "{\"layer\":\"$TPL\",\"position\":\"top\",\"name\":\"TK Internet\",\"source\":[\"TK_Envs\"],\"destination\":[\"TK_Internal\"],\"destination-negate\":true,\"protected-scope\":[\"Any\"],\"action\":\"$ST\",\"track\":\"Log\",\"track-settings\":{\"packet-capture\":true}}"
 HAS "TK east-west" || api add-threat-rule "{\"layer\":\"$TPL\",\"position\":\"top\",\"name\":\"TK east-west\",\"source\":[\"TK_Envs\"],\"destination\":[\"TK_Envs\"],\"protected-scope\":[\"Any\"],\"action\":\"$EW\",\"track\":\"Log\",\"track-settings\":{\"packet-capture\":true}}"
@@ -132,10 +134,22 @@ H '{"name":"TK bypass - sensitive categories","source":["TK_Envs"],"destination"
 H '{"name":"TK inspect - east-west","source":["TK_Envs"],"destination":["TK_Envs"],"service":["HTTPS default services"],"site-category":["Any"],"action":"Inspect"}'
 H '{"name":"TK inspect - Internet","source":["TK_Envs"],"destination":["TK_Internal"],"destination-negate":true,"service":["HTTPS default services"],"site-category":["Any"],"action":"Inspect"}'
 # Predefined rules of a new layer use the "Internet" object (not valid behind a GWLB, single interface): remove them
-for u in $(HRB | jq -r '.[]|select(.name|startswith("TK ")|not)|.uid'); do api delete-https-rule "{\"uid\":\"$u\",\"layer\":\"$HL\"}"; done
+for u in $(HRB | jq -r '.[]|select((.name // "")|startswith("TK ")|not)|.uid'); do api delete-https-rule "{\"uid\":\"$u\",\"layer\":\"$HL\"}"; done
 IN=$(cp show-package "{\"name\":\"$PKG\"}" | jq -r '."https-inspection-layers"."inbound-https-layer".name // "Default Inbound Layer"')
 api set-package "{\"name\":\"$PKG\",\"https-inspection-layers\":{\"outbound-https-layer\":\"$HL\",\"inbound-https-layer\":\"$IN\"}}"
 api set-https-advanced-settings '{"server-certificate-validation-actions":{"block-untrusted":true,"block-revoked":true,"block-expired":true,"track-errors":"log"},"log-sessions":true}'
+
+log "Rule order"
+# Re-runs add missing rules above Cleanup: enforce the canonical order (moving each rule to the top, last first)
+order() { local layer=$1; shift; local names=("$@") i
+  for (( i=${#names[@]}-1; i>=0; i-- )); do
+    rule_exists access "$layer" "${names[$i]}" && cp set-access-rule "$(jq -nc --arg l "$layer" --arg n "${names[$i]}" '{layer:$l, name:$n, "new-position":"top"}')" >/dev/null
+  done; ok "$layer"; }
+PAIRS=(); for pair in $(lab -r '.segmentation.allow | keys[]'); do PAIRS+=("TK allow ${pair%>*} -> ${pair#*>}"); done
+order "$NETL" "TK DLP exception $D -> $SRV" "TK CA - block card numbers and IBAN" "TK CA - block executables" "TK exception - between all environments" \
+  "${PAIRS[@]}" "TK isolation - rest between environments" "TK environments -> Internet"
+order "$IL" "TK GEO - blocked countries" "TK APPC - blocked applications" "TK URLF - blocked categories" "TK APPC - high and critical risk, P2P" \
+  "TK URLF - custom sites" "TK allow web (protocol signature) and DNS"
 
 log "Publish"
 publish || die "publish failed"
