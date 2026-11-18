@@ -3,3 +3,12 @@ certs/
 node_modules/
 __pycache__/
 *.pyc
+deploy/terraform/.terraform/
+deploy/terraform/.terraform.lock.hcl
+deploy/terraform/*.tfstate*
+deploy/terraform/terraform.tfvars*
+deploy/terraform/*.tfplan
+deploy/settings.env
+deploy/.ssh/
+deploy/state/
+reports/

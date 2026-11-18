@@ -83,6 +83,20 @@ docker compose run --rm client list
 docker compose run --rm client run IPS-01 TLS-05     # uses config/config.json inside the image or TESTKIT_CONFIG
 ```
 
+## Full lab in one command
+
+Have a Check Point management with CME (e.g. Smart-1 Cloud) and an empty AWS account? `deploy/` builds everything —
+VPCs, Transit Gateway, GWLB and the Check Point Cloud Firewall autoscaling group, CME, the policy (segmentation,
+egress, Threat Prevention best practices, HTTPS Inspection), the testkit and the portal — and runs the tests:
+
+```bash
+./deploy/setup.sh       # management API key, AWS, sizing
+./deploy/up.sh --run    # ~30–40 min; Word reports in reports/<run-id>/
+./deploy/down.sh        # destroy
+```
+
+See [docs/en/deploy.md](docs/en/deploy.md).
+
 ## Configuration
 
 Everything that depends on the customer lives in the portal **Settings** (stored in `/data/config.json` on the
@@ -100,6 +114,7 @@ Checks whose role or target is empty are reported as **not applicable** instead 
 ## Documentation
 
 - [Test catalog](docs/en/test-catalog.md) — every case and check, generated from `catalog/tests.json`
+- [Deploy a complete lab](docs/en/deploy.md) — `deploy/`: from a management API key to test results
 - [Firewall setup](docs/en/firewall-setup.md) — Check Point Cloud Firewall policy prerequisites, HTTPS Inspection and best practices
 
 ## Repository layout
@@ -109,6 +124,7 @@ catalog/   catalog.py (source, bilingual) → tests.json; gen_docs.py → docs/*
 client/    runner.py (checks, CLI and agent)
 server/    nginx, test content generator, body sink, portal (Flask + vanilla JS), report (docx + matplotlib)
 config/    config.example.json
+deploy/    setup.sh, up.sh, run.sh, down.sh, lab.example.json, mgmt/ (Management API + CME), terraform/ (AWS lab)
 docs/      en/, es/, img/
 ```
 

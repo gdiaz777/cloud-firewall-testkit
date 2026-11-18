@@ -60,6 +60,20 @@ docker compose run --rm client list
 docker compose run --rm client run IPS-01 TLS-05     # usa config/config.json de la imagen o TESTKIT_CONFIG
 ```
 
+## Laboratorio completo con un comando
+
+¿Tienes una gestora de Check Point con CME (p. ej. Smart-1 Cloud) y una cuenta de AWS vacía? `deploy/` lo construye
+todo —VPC, Transit Gateway, GWLB y el grupo de autoescalado de Check Point Cloud Firewall, CME, la política
+(segmentación, salida, best practices de Threat Prevention, HTTPS Inspection), el kit y el portal— y lanza las pruebas:
+
+```bash
+./deploy/setup.sh       # API key de la gestora, AWS, tamaño
+./deploy/up.sh --run    # ~30–40 min; informes Word en reports/<id>/
+./deploy/down.sh        # destruir
+```
+
+Ver [docs/es/despliegue.md](docs/es/despliegue.md).
+
 ## Configuración
 
 Todo lo que depende del cliente está en **Configuración** del portal (se guarda en `/data/config.json` del servidor;
@@ -77,6 +91,7 @@ Las pruebas cuyo papel o destino está vacío aparecen como **no aplica**, no co
 ## Documentación
 
 - [Catálogo de pruebas](docs/es/catalogo-pruebas.md): cada caso y prueba, generado desde `catalog/tests.json`
+- [Desplegar un laboratorio completo](docs/es/despliegue.md): `deploy/`, desde la API key de la gestora hasta los resultados
 - [Configuración del firewall](docs/es/configuracion-firewall.md): requisitos de política en Check Point Cloud Firewall, HTTPS Inspection y best practices
 
 ## Seguridad
