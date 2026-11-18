@@ -61,3 +61,19 @@ results always match.
 - Secrets stay local: `deploy/settings.env`, `deploy/.ssh/`, `certs/` and the Terraform state are git-ignored.
 - Third-party Terraform modules in `deploy/terraform/modules/checkpoint` come from CheckPointSW (Apache-2.0), with the
   changes listed in its NOTICE.md.
+
+## Accounts that forbid IAM access keys
+
+CME (also in Smart-1 Cloud) always needs AWS access keys. If an SCP denies `iam:CreateAccessKey` in the lab account, use
+a **broker user in another account**: an IAM user whose only permission is `sts:AssumeRole` on
+`arn:aws:iam::<lab-account>:role/<prefix>-cme-role`. In `deploy/settings.env`:
+
+```
+CME_ACCESS_MODE=role
+CME_TRUSTED_PRINCIPALS=arn:aws:iam::<broker-account>:user/<broker-user>
+CME_BROKER_ACCESS_KEY_ID=...
+CME_BROKER_SECRET_ACCESS_KEY=...
+```
+
+Terraform then creates only the read-only role (trusting the broker user with the external ID) and CME uses the broker keys.
+Corporate SCPs may also require IMDSv2 and gp3 volumes: the lab already uses both.

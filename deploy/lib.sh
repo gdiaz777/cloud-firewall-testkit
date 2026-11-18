@@ -20,12 +20,16 @@ need() { for c in "$@"; do command -v "$c" >/dev/null || die "missing tool: $c";
 load_settings() {
   [ -s "$SETTINGS" ] || die "no settings: run deploy/setup.sh first"
   set -a; . "$SETTINGS"; set +a
-  [ -s "$LAB" ] || cp "$DEPLOY/lab.example.json" "$LAB"
+  [ -s "$LAB" ] || command cp "$DEPLOY/lab.example.json" "$LAB"
   PKG=${POLICY_PACKAGE:-FW_Testkit}
   CME_TEMPLATE=${CME_TEMPLATE:-${NAME_PREFIX}-tpl}
   CME_ACCOUNT=${CME_ACCOUNT:-${NAME_PREFIX}-aws}
   GW_PREFIX="${CME_ACCOUNT}--"
-  [ -n "${AWS_PROFILE:-}" ] && export AWS_PROFILE || unset AWS_PROFILE
+  # AWS credentials: a profile, or a .env file with AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY / AWS_SESSION_TOKEN
+  if [ -n "${AWS_ENV_FILE:-}" ]; then
+    [ -s "$AWS_ENV_FILE" ] || die "AWS_ENV_FILE not found: $AWS_ENV_FILE"
+    set -a; . "$AWS_ENV_FILE"; set +a; unset AWS_PROFILE
+  elif [ -n "${AWS_PROFILE:-}" ]; then export AWS_PROFILE; else unset AWS_PROFILE; fi
   export AWS_REGION
 }
 
@@ -37,6 +41,7 @@ ssh_vm() { local h=$1; shift; ssh -i "$SSHK" -o StrictHostKeyChecking=accept-new
 scp_vm() { local h=$1; shift; scp -q -i "$SSHK" -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile="$SSH_DIR/known_hosts" "$@" ubuntu@"$h":/tmp/; }
 
 # ------------------------------------------------------------------ Management API (session per process)
+# Note: cp() below is the Management API call; use "command cp" to copy files.
 SID_FILE="$STATE/.sid.$$"
 cp_login() {
   local r; r=$(jq -n --arg k "$MGMT_API_KEY" '{"api-key":$k,"session-name":"firewall-testkit","session-timeout":3600}' \

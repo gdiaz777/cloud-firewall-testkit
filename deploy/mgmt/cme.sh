@@ -5,6 +5,13 @@
 cp_login || die "management login failed"
 show() { jq -r '"   \(."status-code" // "?") \(.error.message // "ok") \(.error.details // "")"'; }
 STS=$(tfo cme_sts) || die "no Terraform outputs (run the infrastructure step first)"
+# CME (Smart-1 Cloud) always needs access keys. Mode "user": keys of the IAM user created by Terraform in this
+# account. Mode "role": keys of a broker IAM user in ANOTHER account (CME_BROKER_ACCESS_KEY_ID / _SECRET in
+# settings.env) that may only assume this account's role — for accounts whose SCPs forbid access keys.
+if [ "$(jq -r .access_key_id <<<"$STS")" = "" ]; then
+  [ -n "${CME_BROKER_ACCESS_KEY_ID:-}" ] && [ -n "${CME_BROKER_SECRET_ACCESS_KEY:-}" ] || die "role mode: set CME_BROKER_ACCESS_KEY_ID / CME_BROKER_SECRET_ACCESS_KEY in settings.env"
+  STS=$(jq -c --arg k "$CME_BROKER_ACCESS_KEY_ID" --arg s "$CME_BROKER_SECRET_ACCESS_KEY" '.access_key_id=$k | .secret_access_key=$s' <<<"$STS")
+fi
 ACC=$(jq -c --arg n "$CME_ACCOUNT" --arg r "$AWS_REGION" '{name:$n, regions:[$r], access_key:.access_key_id, secret_key:.secret_access_key,
       sts_role:.role_arn, sts_external_id:.external_id, scan_gateways:true, scan_vpn:false, scan_load_balancers:false, scan_subnets:false}' <<<"$STS")
 log "CME account $CME_ACCOUNT"

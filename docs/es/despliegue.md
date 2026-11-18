@@ -51,3 +51,19 @@ Configuración del portal, así que política y resultados esperados siempre coi
 - Los secretos quedan en local: `deploy/settings.env`, `deploy/.ssh/`, `certs/` y el estado de Terraform están en .gitignore.
 - Los módulos de Terraform de `deploy/terraform/modules/checkpoint` proceden de CheckPointSW (Apache-2.0), con los
   cambios indicados en su NOTICE.md.
+
+## Cuentas que prohíben claves de acceso IAM
+
+CME (también en Smart-1 Cloud) siempre necesita claves de acceso de AWS. Si una SCP deniega `iam:CreateAccessKey` en la
+cuenta del laboratorio, usa un **usuario intermediario en otra cuenta**: un usuario IAM cuyo único permiso sea
+`sts:AssumeRole` sobre `arn:aws:iam::<cuenta-lab>:role/<prefijo>-cme-role`. En `deploy/settings.env`:
+
+```
+CME_ACCESS_MODE=role
+CME_TRUSTED_PRINCIPALS=arn:aws:iam::<cuenta-intermediaria>:user/<usuario>
+CME_BROKER_ACCESS_KEY_ID=...
+CME_BROKER_SECRET_ACCESS_KEY=...
+```
+
+Terraform crea entonces solo el rol de lectura (que confía en ese usuario con el external ID) y CME usa sus claves.
+Las SCP corporativas pueden exigir además IMDSv2 y volúmenes gp3: el laboratorio ya usa ambos.

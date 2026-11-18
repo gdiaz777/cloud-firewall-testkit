@@ -31,12 +31,14 @@ if step 4; then log "4/7 AWS infrastructure (Terraform, ~10 min)"
   HASH=""; [ -n "${GW_PASSWORD_HASH:-}" ] && HASH=$GW_PASSWORD_HASH
   jq -n --slurpfile lab "$LAB" --arg region "$AWS_REGION" --arg p "$NAME_PREFIX" --arg admin "$ADMIN_CIDR" --arg key "$SSHK.pub" \
      --arg sic "$SIC_KEY" --arg hash "$HASH" --arg it "$GW_INSTANCE_TYPE" --arg v "$GW_VERSION" --argjson min "$GW_MIN" --argjson max "$GW_MAX" \
-     --arg gwa "$MGMT_GW_ADDRESSES" --arg tpl "$CME_TEMPLATE" --arg mgmt "$CP_MANAGEMENT_NAME" --arg img "${TESTKIT_IMAGE:-ghcr.io/gdiaz777/cloud-firewall-testkit:latest}" '
+     --arg gwa "$MGMT_GW_ADDRESSES" --arg tpl "$CME_TEMPLATE" --arg mgmt "$CP_MANAGEMENT_NAME" --arg img "${TESTKIT_IMAGE:-ghcr.io/gdiaz777/cloud-firewall-testkit:latest}" \
+     --arg cam "${CME_ACCESS_MODE:-user}" --argjson ctp "$(printf '%s' "${CME_TRUSTED_PRINCIPALS:-}" | jq -Rc 'split(",")|map(select(length>0))')" '
     {region:$region, name_prefix:$p, admin_cidrs:[$admin], ssh_public_key_file:$key,
      environments:($lab[0].environments|map({key:.name, value:{cidr, az}})|from_entries), server_env:$lab[0].server_env,
      internal_cidr:($lab[0].internal_cidr // "10.0.0.0/8"), testkit_image:$img,
      cp_gateway_sic_key:$sic, cp_gateway_password_hash:$hash, cp_gateway_instance_type:$it, cp_gateway_version:$v,
-     cp_min_group_size:$min, cp_max_group_size:$max, cp_gateways_addresses:$gwa, cp_configuration_template:$tpl, cp_management_server:$mgmt}' \
+     cp_min_group_size:$min, cp_max_group_size:$max, cp_gateways_addresses:$gwa, cp_configuration_template:$tpl, cp_management_server:$mgmt,
+     cme_access_mode:$cam, cme_trusted_principals:$ctp}' \
      > "$TF/terraform.tfvars.json"
   chmod 600 "$TF/terraform.tfvars.json"
   terraform -chdir="$TF" init -input=false -no-color >/dev/null || die "terraform init failed"

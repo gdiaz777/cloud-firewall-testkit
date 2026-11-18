@@ -34,8 +34,15 @@ case "$MGMT_URL" in *maas.checkpoint.com*) MGMT_GW_ADDRESSES=0.0.0.0/0; ok "Smar
 cp_logout
 
 echo
-echo "${B}2. AWS${N}  (credentials from the environment or a profile; the account should be dedicated to the lab)"
-ask AWS_PROFILE "AWS profile (empty = environment credentials)" "${AWS_PROFILE:-}"
+echo "${B}2. AWS${N}  (the account should be dedicated to the lab)"
+echo "   Credentials: an AWS CLI profile name, or the path to a .env file with AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY"
+echo "   [/ AWS_SESSION_TOKEN] (e.g. SSO temporary credentials). Empty = credentials already in the environment."
+CUR=${AWS_ENV_FILE:-${AWS_PROFILE:-}}
+ask AWS_CREDS "AWS profile or .env path" "$CUR"
+AWS_PROFILE=""; AWS_ENV_FILE=""
+if [[ $AWS_CREDS =~ ^(AKIA|ASIA)[A-Z0-9]{12,}$ ]]; then die "that looks like an access key ID: give a profile name or the path to a .env file with the keys"
+elif [ -n "$AWS_CREDS" ] && [ -f "${AWS_CREDS/#\~/$HOME}" ]; then AWS_ENV_FILE=$(realpath "${AWS_CREDS/#\~/$HOME}"); ok "credentials file: $AWS_ENV_FILE"
+elif [ -n "$AWS_CREDS" ]; then AWS_PROFILE=$AWS_CREDS; ok "AWS profile: $AWS_PROFILE"; fi
 ask AWS_REGION "Region" "${AWS_REGION:-eu-west-1}"
 ask NAME_PREFIX "Name prefix (≤ 10 chars, lowercase)" "${NAME_PREFIX:-fwtk}"
 [[ $NAME_PREFIX =~ ^[a-z][a-z0-9-]{1,9}$ ]] || die "invalid prefix"
@@ -59,6 +66,7 @@ MGMT_API_KEY=$MGMT_API_KEY
 CP_MANAGEMENT_NAME=$CP_MANAGEMENT_NAME
 MGMT_GW_ADDRESSES=$MGMT_GW_ADDRESSES
 AWS_PROFILE=$AWS_PROFILE
+AWS_ENV_FILE=$AWS_ENV_FILE
 AWS_REGION=$AWS_REGION
 NAME_PREFIX=$NAME_PREFIX
 ADMIN_CIDR=$ADMIN_CIDR
@@ -69,7 +77,7 @@ GW_MAX=$GW_MAX
 POLICY_PACKAGE=$POLICY_PACKAGE
 SIC_KEY=$SIC_KEY
 EOF
-[ -s "$LAB" ] || cp "$DEPLOY/lab.example.json" "$LAB"
+[ -s "$LAB" ] || command cp "$DEPLOY/lab.example.json" "$LAB"
 echo
 ok "settings saved to deploy/settings.env"
 ok "lab design: deploy/state/lab.json (environments, segmentation matrix, roles, Internet targets) — edit it before deploying if needed"

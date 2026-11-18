@@ -118,3 +118,19 @@ variable "cp_management_server" {
   description = "CME management name (x-chkp-management tag)"
   type        = string
 }
+
+variable "cme_access_mode" {
+  description = "How CME reads the account: user (IAM user + keys in this account) or role (role only, trusts a broker user of another account listed in cme_trusted_principals)"
+  type        = string
+  default     = "user"
+  validation {
+    condition     = contains(["user", "role"], var.cme_access_mode)
+    error_message = "cme_access_mode must be user or role."
+  }
+}
+
+variable "cme_trusted_principals" {
+  description = "Role mode: ARNs of the broker IAM user(s) in another account allowed to assume the CME role (with the external ID)"
+  type        = list(string)
+  default     = []
+}

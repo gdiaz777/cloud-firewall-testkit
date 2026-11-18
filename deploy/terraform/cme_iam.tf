@@ -9,32 +9,43 @@ resource "random_password" "cme_external_id" {
   special = false
 }
 
+# Mode "user": IAM user with keys that can only assume the role (needs iam:CreateAccessKey).
+# Mode "role": no IAM user here; the role trusts a broker IAM user of another account (var.cme_trusted_principals)
+# whose keys are given to CME — for accounts whose SCPs forbid access keys (CME always needs keys).
+locals {
+  cme_user = var.cme_access_mode == "user"
+}
+
 resource "aws_iam_user" "cme" {
-  name = "${local.p}-cme"
-  tags = { Purpose = "Check Point CME - AssumeRole only" }
+  count = local.cme_user ? 1 : 0
+  name  = "${local.p}-cme"
+  tags  = { Purpose = "Check Point CME - AssumeRole only" }
 }
 
 resource "aws_iam_access_key" "cme" {
-  user = aws_iam_user.cme.name
+  count = local.cme_user ? 1 : 0
+  user  = aws_iam_user.cme[0].name
 }
 
 resource "aws_iam_role" "cme" {
   name = "${local.p}-cme-role"
-
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
       Effect    = "Allow"
-      Principal = { AWS = aws_iam_user.cme.arn }
+      Principal = { AWS = local.cme_user ? [aws_iam_user.cme[0].arn] : (length(var.cme_trusted_principals) > 0 ? var.cme_trusted_principals : ["arn:aws:iam::${data.aws_caller_identity.me.account_id}:root"]) }
       Action    = "sts:AssumeRole"
       Condition = { StringEquals = { "sts:ExternalId" = random_password.cme_external_id.result } }
     }]
   })
 }
 
+data "aws_caller_identity" "me" {}
+
 resource "aws_iam_user_policy" "cme_assume" {
-  name = "assume-cme-role"
-  user = aws_iam_user.cme.name
+  count = local.cme_user ? 1 : 0
+  name  = "assume-cme-role"
+  user  = aws_iam_user.cme[0].name
   policy = jsonencode({
     Version   = "2012-10-17"
     Statement = [{ Effect = "Allow", Action = "sts:AssumeRole", Resource = aws_iam_role.cme.arn }]

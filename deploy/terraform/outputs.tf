@@ -34,7 +34,7 @@ output "cme_sts" {
   value = {
     role_arn          = aws_iam_role.cme.arn
     external_id       = random_password.cme_external_id.result
-    access_key_id     = aws_iam_access_key.cme.id
-    secret_access_key = aws_iam_access_key.cme.secret
+    access_key_id     = try(aws_iam_access_key.cme[0].id, "")
+    secret_access_key = try(aws_iam_access_key.cme[0].secret, "")
   }
 }
