@@ -15,10 +15,23 @@ ok "$(jq -r 'map(.name)|join(", ")' <<<"$L")"
 for g in $(jq -r '.[]|select(.https!=true)|.name' <<<"$L"); do api set-simple-gateway "{\"name\":\"$g\",\"enable-https-inspection\":true}"; CH=1; done
 [ -n "${CH:-}" ] && publish
 T=$(jq -c '[.[]|select(.sic=="communicating")|.name]' <<<"$L")
+# CME only adds a gateway to the package targets after its first install: add them so install-policy accepts them
+CUR=$(cp show-package "{\"name\":\"$PKG\"}" | jq -c '."installation-targets" | if type=="array" then map(.name) else . end')
+if [ "$CUR" != '"all"' ]; then
+  MISS=$(jq -c --argjson c "$CUR" '[.[]|select(. as $g|$c|index($g)|not)]' <<<"$T")
+  [ "$MISS" != "[]" ] && { api set-package "{\"name\":\"$PKG\",\"installation-targets\":{\"add\":$MISS}}" && publish; }
+fi
 for what in access threat-prevention; do
   log "Install $PKG ($what)"
   body=$(jq -nc --arg p "$PKG" --argjson t "$T" --arg w "$what" '{"policy-package":$p, access:($w=="access"), "threat-prevention":($w=="threat-prevention"), targets:$t}')
-  r=$(cp install-policy "$body"); tid=$(jq -r '."task-id" // empty' <<<"$r")
-  [ -n "$tid" ] || die "install: $(jq -r .message <<<"$r")"; s=$(wait_task "$tid" 1200); [ "$s" = succeeded ] && ok "$s" || die "install $what: $s"
+  for try in $(seq 1 10); do   # CME also installs the policy on every new gateway: concurrent installs fail → retry
+    r=$(cp install-policy "$body"); tid=$(jq -r '."task-id" // empty' <<<"$r")
+    [ -n "$tid" ] || die "install: $(jq -r .message <<<"$r")"
+    s=$(wait_task "$tid" 1200)
+    [ "$s" = succeeded ] && { ok "$s"; break; }
+    msg=$(cp show-task "{\"task-id\":\"$tid\",\"details-level\":\"full\"}" | jq -r '[.tasks[0].comments, (.tasks[0]."task-details"[]? | .statusDescription, (.stagesInfo[]?.messages[]?.message))] | map(select(. != null and . != ""))|unique|join(" | ")' | head -c 400)
+    [ "$try" -lt 10 ] || die "install $what: $s — $msg"
+    warn "attempt $try: $s ($msg) — retrying in 60 s"; sleep 60
+  done
 done
 cp_logout

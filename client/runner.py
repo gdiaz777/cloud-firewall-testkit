@@ -113,6 +113,14 @@ def sh(cmd, timeout=60):
 
 # ------------------------------------------------------------------ check types
 def t_http(c, cfg):
+    obs, det = _http_once(c, cfg)
+    if c.get("warmup") and obs == "ALLOW":
+        # URL categorization runs in background mode: the very first request to an uncached site may pass
+        time.sleep(5); obs, det = _http_once(dict(c, warmup=False), cfg); det += " (after categorization retry)"
+    return obs, det
+
+
+def _http_once(c, cfg):
     url = subst(c["url"], cfg); args = subst(c.get("args", []), cfg)
     if c.get("warmup"):
         sh(["curl", "-s", "-o", "/dev/null", "-k", "--max-time", "4", "--interface", SRC, url], 6); time.sleep(2)
