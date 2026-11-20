@@ -144,17 +144,42 @@ IN=$(cp show-package "{\"name\":\"$PKG\"}" | jq -r '."https-inspection-layers"."
 api set-package "{\"name\":\"$PKG\",\"https-inspection-layers\":{\"outbound-https-layer\":\"$HL\",\"inbound-https-layer\":\"$IN\"}}"
 api set-https-advanced-settings '{"server-certificate-validation-actions":{"block-untrusted":true,"block-revoked":true,"block-expired":true,"track-errors":"log"},"log-sessions":true}'
 
-log "Rule order"
-# Re-runs add missing rules above Cleanup: enforce the canonical order (moving each rule to the top, last first)
-order() { local layer=$1; shift; local names=("$@") i
-  for (( i=${#names[@]}-1; i>=0; i-- )); do
-    rule_exists access "$layer" "${names[$i]}" && cp set-access-rule "$(jq -nc --arg l "$layer" --arg n "${names[$i]}" '{layer:$l, name:$n, "new-position":"top"}')" >/dev/null
-  done; ok "$layer"; }
+log "Sections and rule order"
+# Every layer is grouped in sections. Items: "§Section" starts a section, the rest are rule names in their final order.
+# Missing sections are created at the top (last first) and each rule is moved to the bottom of its section, so re-runs
+# and policies built by earlier versions end up in the same canonical layout.
+sections() { local kind=$1 layer=$2; shift 2; local -a items=("$@") secs=() i cur="" x r
+  for x in "${items[@]}"; do [ "${x#§}" != "$x" ] && secs+=("${x#§}"); done
+  for (( i=${#secs[@]}-1; i>=0; i-- )); do
+    cp "show-$kind-section" "$(jq -nc --arg l "$layer" --arg n "${secs[$i]}" '{layer:$l, name:$n}')" | jq -e .uid >/dev/null ||
+      api "add-$kind-section" "$(jq -nc --arg l "$layer" --arg n "${secs[$i]}" '{layer:$l, name:$n, position:"top"}')" >/dev/null
+  done
+  for x in "${items[@]}"; do
+    if [ "${x#§}" != "$x" ]; then cur=${x#§}; continue; fi
+    rule_exists "$kind" "$layer" "$x" || continue
+    r=$(cp "set-$kind-rule" "$(jq -nc --arg l "$layer" --arg n "$x" --arg s "$cur" '{layer:$l, name:$n, "new-position":{bottom:$s}}')")
+    jq -e .code >/dev/null <<<"$r" && warn "$x: $(jq -r .message <<<"$r" | head -c 160)"
+  done; ok "$layer: ${#secs[@]} sections"; }
 PAIRS=(); for pair in $(lab -r '.segmentation.allow | keys[]'); do PAIRS+=("TK allow ${pair%>*} -> ${pair#*>}"); done
-order "$NETL" "TK DLP exception $D -> $SRV" "TK CA - block card numbers and IBAN" "TK CA - block executables" "TK exception - between all environments" \
-  "${PAIRS[@]}" "TK isolation - rest between environments" "TK environments -> Internet"
-order "$IL" "TK GEO - blocked countries" "TK APPC - blocked applications" "TK URLF - blocked categories" "TK APPC - high and critical risk, P2P" \
-  "TK URLF - custom sites" "TK allow web (protocol signature) and DNS"
+sections access "$NETL" \
+  "§TK · Data loss prevention" "TK DLP exception $D -> $SRV" "TK CA - block card numbers and IBAN" "TK CA - block executables" \
+  "§TK · Segmentation exceptions" "TK exception - between all environments" \
+  "§TK · Segmentation matrix" "${PAIRS[@]}" "TK isolation - rest between environments" \
+  "§TK · Internet egress" "TK environments -> Internet" \
+  "§TK · Cleanup" "Cleanup rule"
+sections access "$IL" \
+  "§TK · Geo-blocking" "TK GEO - blocked countries" \
+  "§TK · Applications and URL filtering" "TK APPC - blocked applications" "TK URLF - blocked categories" "TK APPC - high and critical risk, P2P" "TK URLF - custom sites" \
+  "§TK · Allowed web and DNS" "TK allow web (protocol signature) and DNS" \
+  "§TK · Cleanup" "Cleanup rule"
+# Threat Prevention: the Management API has no add-threat-section; keep the canonical order (each rule to the top, last first)
+TORD=("TK IDS towards $I" "TK east-west" "TK Internet")
+for (( i=${#TORD[@]}-1; i>=0; i-- )); do rule_exists threat "$TPL" "${TORD[$i]}" &&
+  cp set-threat-rule "$(jq -nc --arg l "$TPL" --arg n "${TORD[$i]}" '{layer:$l, name:$n, "new-position":"top"}')" >/dev/null; done
+ok "$TPL: ordered (no sections in the API)"
+sections https "$HL" \
+  "§TK · Bypass" "TK bypass - FQDN (mTLS / pinning)" "TK bypass - recommended services (sk163595)" "TK bypass - sensitive categories" \
+  "§TK · Inspect" "TK inspect - east-west" "TK inspect - Internet"
 
 log "Publish"
 publish || die "publish failed"

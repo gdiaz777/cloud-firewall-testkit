@@ -28,6 +28,11 @@ With `--push-ca` the HTTPS Inspection CA is uploaded to the portal settings, so 
 know which certificates were decrypted. Re-running `apply` is safe: missing objects are created and rules are put back
 in order.
 
+The access and HTTPS Inspection layers are grouped in sections (`TK · Data loss prevention`, `TK · Segmentation
+exceptions`, `TK · Segmentation matrix`, `TK · Internet egress`, `TK · Cleanup`; in the egress layer `TK · Geo-blocking`,
+`TK · Applications and URL filtering`, `TK · Allowed web and DNS`; in HTTPS `TK · Bypass` and `TK · Inspect`). Threat
+Prevention rules are ordered but not sectioned: the Management API cannot create sections in that layer.
+
 ## What it configures
 
 | Area | Configuration |

@@ -28,6 +28,11 @@ cd checkpoint
 `--push-ca` sube la CA de HTTPS Inspection a la Configuración del portal, para que los clientes confíen en ella y las
 pruebas TLS sepan qué certificados se descifraron. Repetir `apply` es seguro: crea lo que falte y reordena las reglas.
 
+Las capas de acceso y de HTTPS Inspection se agrupan en secciones (`TK · Data loss prevention`, `TK · Segmentation
+exceptions`, `TK · Segmentation matrix`, `TK · Internet egress`, `TK · Cleanup`; en la capa de salida `TK · Geo-blocking`,
+`TK · Applications and URL filtering`, `TK · Allowed web and DNS`; en HTTPS `TK · Bypass` y `TK · Inspect`). Las reglas de
+Threat Prevention se ordenan pero sin secciones: la Management API no permite crearlas en esa capa.
+
 ## Qué configura
 
 | Área | Configuración |
