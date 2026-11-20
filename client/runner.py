@@ -177,6 +177,9 @@ def t_http(c, cfg):
     if c.get("warmup") and obs == "ALLOW":
         # URL categorization runs in background mode: the very first request to an uncached site may pass
         time.sleep(5); obs, det = _http_once(dict(c, warmup=False), cfg); det += " (after categorization retry)"
+    elif c.get("expect") == "ALLOW" and "rc=28" in det:
+        # a control that should pass must not fail on one lost packet on the Internet path: retry a timeout once
+        time.sleep(3); obs, det2 = _http_once(c, cfg); det = f"{det2} (retry after: {det})"
     return obs, det
 
 
