@@ -84,7 +84,7 @@ const verdict = (id) => {
 const verdicts = caseIds.map(verdict);
 const who = Object.entries(run.agents).map(([n, a]) => `${(a.env || n).toUpperCase()} (${a.src || "?"})`).join(", ");
 const cfg = run.config || {};
-const SOL = run.solution || (cfg.solution || {}).name || (LANG === "es" ? "la solución probada" : "the solution under test");
+const SOL = (typeof run.solution === "string" && run.solution) || (cfg.solution || {}).name || (LANG === "es" ? "la solución probada" : "the solution under test");
 const isCP = /check ?point/i.test(((cfg.solution || {}).vendor || "") + " " + SOL);
 const srvIp = cfg.server_ip || (cfg.environments || []).find((e) => e.name === cfg.server_env)?.ip || "";
 
