@@ -158,8 +158,8 @@ def subst(v, cfg):
             return socket.gethostbyname(m.group(1))
         except OSError:
             return m.group(1)
-    v = re.sub(r"\{ENV:([a-z_]+)\}", env, v)
-    v = re.sub(r"\{NET:([a-z_]+)([+-]\d+)?\}", net, v)
+    v = re.sub(r"\{ENV:([a-z0-9_]+)\}", env, v)
+    v = re.sub(r"\{NET:([a-z0-9_]+)([+-]\d+)?\}", net, v)
     return re.sub(r"\{RESOLVE:([^}]+)\}", res, v)
 
 
