@@ -3,7 +3,10 @@
 
 - Shows the bilingual catalog with the explanation of every check.
 - Runs single checks, cases, selections or the full batch on one or several agents (clients).
-- Settings: environments, server, segmentation matrix, roles and Internet targets (stored in /data/config.json).
+- Settings: solution under test, environments, server, segmentation matrix, roles, Internet targets and the TLS
+  inspection CA (stored in /data/config.json). Clients get it with every job.
+- Bootstrap: clients download the testkit CA and the client certificate from /api/bootstrap at start-up.
+- Comparison: several runs (e.g. different security solutions) in one Word report.
 - Agents long-poll /api/agent/poll through the firewall (HTTP to the server must be allowed); every agent exchange is
   zlib+base64 so the attack payloads inside results do not trigger the IPS.
 - Generates the Word report of every run in English or Spanish (report/report.js + report/charts.py).
@@ -21,14 +24,22 @@ CONFIG_FILE = os.path.join(DATA, "config.json")
 DEFAULT_CONFIG = os.environ.get("TESTKIT_CONFIG", "/opt/testkit/config/config.json")
 
 
+CERT_DIR = os.environ.get("CERT_DIR", "/data/certs")
+
+
 def load_config():
+    cfg = None
     for p in (CONFIG_FILE, DEFAULT_CONFIG):
         try:
             with open(p, encoding="utf-8") as f:
-                return json.load(f)
+                cfg = json.load(f); break
         except (OSError, ValueError):
             continue
-    return {"environments": [], "roles": {}, "internet": {}, "segmentation": {"allow": {}, "always": []}, "peers": {}}
+    cfg = cfg or {"environments": [], "roles": {}, "internet": {}, "segmentation": {"allow": {}, "always": []}, "peers": {}}
+    if not cfg.get("server_ip") and not cfg.get("server_env"):
+        cfg["server_ip"] = os.environ.get("SERVER_IP", "")
+    cfg.setdefault("solution", {"name": "", "vendor": ""})
+    return cfg
 
 
 def server_ip(cfg):
@@ -85,6 +96,15 @@ def catalog():
     return jsonify(dict(domains=CAT["domains"], cases=CAT["cases"], title=CAT["title"]))
 
 
+@app.get("/api/bootstrap")
+def bootstrap():
+    rd = lambda f: open(os.path.join(CERT_DIR, f), encoding="utf-8").read()
+    try:
+        return jsonify(testkit_ca=rd("testkit_ca.crt"), client_crt=rd("client.crt"), client_key=rd("client.key"))
+    except OSError:
+        return jsonify(error="certificates not available"), 503
+
+
 @app.get("/api/config")
 def get_config():
     c = load_config(); c["_server_ip"] = server_ip(c)
@@ -96,9 +116,9 @@ def put_config():
     c = request.get_json(force=True)
     c.pop("_server_ip", None)
     names = [e.get("name") for e in c.get("environments", [])]
-    if not names or any(not n for n in names) or len(set(names)) != len(names):
+    if any(not n for n in names) or len(set(names)) != len(names):
         return jsonify(error="environments: unique, non-empty names are required"), 400
-    if c.get("server_env") not in names:
+    if c.get("server_env") and c["server_env"] not in names:
         return jsonify(error="server_env must be one of the environments"), 400
     tmp = CONFIG_FILE + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
@@ -124,8 +144,9 @@ def new_run():
         return jsonify(error="Select at least one client"), 400
     cfg = load_config()
     rid = datetime.now().strftime("%Y%m%d-%H%M%S-") + uuid.uuid4().hex[:4]
+    sol = (cfg.get("solution") or {}).get("name") or "Solution under test"
     run = dict(id=rid, label=body.get("label") or ("Full batch" if not ids else ", ".join(ids[:6]) + ("…" if len(ids) > 6 else "")),
-               created=now(), ids=ids, config=cfg, agents={n: dict(status="queued", total=None, results=[], env=AGENTS.get(n, {}).get("env"),
+               solution=sol, created=now(), ids=ids, config=cfg, agents={n: dict(status="queued", total=None, results=[], env=AGENTS.get(n, {}).get("env"),
                                                                    src=AGENTS.get(n, {}).get("src")) for n in names})
     save_run(run)
     with LOCK:
@@ -141,7 +162,7 @@ def list_runs():
         if f.endswith(".json"):
             r = json.load(open(os.path.join(RUNS, f), encoding="utf-8"))
             res = [x for a in r["agents"].values() for x in a["results"]]
-            out.append(dict(id=r["id"], label=r["label"], created=r["created"], agents=list(r["agents"]),
+            out.append(dict(id=r["id"], label=r["label"], solution=r.get("solution", ""), created=r["created"], agents=list(r["agents"]),
                             status={n: a["status"] for n, a in r["agents"].items()},
                             counts={s: sum(1 for x in res if x["status"] == s) for s in ("OK", "FAIL", "INFO", "SKIP", "ERROR")}))
     return jsonify(out)
@@ -186,6 +207,28 @@ def run_report(rid):
             return Response("Error generating the report:\n" + e.stderr.decode()[-3000:], status=500, mimetype="text/plain")
     name = "Informe_Pruebas_Seguridad" if lang == "es" else "Security_Test_Report"
     return send_file(out, as_attachment=True, download_name=f"{name}_{rid}.docx")
+
+
+@app.get("/api/compare")
+def compare_report():
+    ids = [x for x in request.args.get("runs", "").split(",") if x]
+    lang = "es" if request.args.get("lang") == "es" else "en"
+    if len(ids) < 2:
+        return Response("select at least two runs", status=400, mimetype="text/plain")
+    for rid in ids:
+        if not os.path.exists(run_path(rid)):
+            return Response(f"unknown run {rid}", status=404, mimetype="text/plain")
+    key = "_".join(sorted(ids))[:120]
+    work = os.path.join(DATA, "work", "cmp_" + key); os.makedirs(work, exist_ok=True)
+    out = os.path.join(work, f"compare.{lang}.docx")
+    try:
+        paths = [run_path(r) for r in ids]
+        subprocess.run(["python3", os.path.join(REPORT, "compare_charts.py"), CATALOG, work, lang] + paths, check=True, capture_output=True, timeout=180)
+        subprocess.run(["node", os.path.join(REPORT, "compare.js"), CATALOG, work, out, lang] + paths, check=True, capture_output=True, timeout=180, cwd=REPORT)
+    except subprocess.CalledProcessError as e:
+        return Response("Error generating the comparison:\n" + e.stderr.decode()[-3000:], status=500, mimetype="text/plain")
+    name = "Comparativa_Soluciones" if lang == "es" else "Solution_Comparison"
+    return send_file(out, as_attachment=True, download_name=f"{name}_{datetime.now().strftime('%Y%m%d-%H%M')}.docx")
 
 
 # ------------------------------------------------------------------ agent API (zlib + base64 body)

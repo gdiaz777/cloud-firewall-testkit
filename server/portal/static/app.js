@@ -6,10 +6,16 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<
 
 const I18N = {
   en: {
-    kicker: "Check Point Cloud Firewall · security validation", title: "Firewall Testkit", tab_tests: "Tests", tab_settings: "Settings",
+    kicker: "Security validation", title: "Firewall Testkit", tab_tests: "Tests", tab_settings: "Settings",
+    sol_none: "no solution configured (Settings)", compare: "Compare selected", compare_es: "ES", compare_help: "Tick two or more runs to compare solutions.",
+    set_solution: "Solution under test", set_solution_help: "Name shown in reports and used to label runs (e.g. vendor and product). Change it before testing another solution.",
+    sol_name: "Solution name", sol_vendor: "Vendor", vendor_cp: "Check Point", vendor_other: "Other",
+    set_server: "Test server", set_server_help: "Workload IP of the test server (detected automatically). If the server is in one of the environments, select it below instead.",
+    col_cidr: "CIDR", add_agents: "Add connected clients",
+    set_ca: "TLS inspection CA", set_ca_help: "Public certificate (PEM) of the CA the solution uses to re-sign inspected TLS. Clients add it to their trust store; it also tells the checks which certificates were decrypted.",
     clients: "Clients", no_clients: "Waiting for clients…", search: "Search case or check (e.g. TLS, EICAR, IPS-06)", run_sel: "Run selection",
     run_all: "Run all", runs: "Runs", runs_help: "Pick one to see its results next to each check. When it finishes, download the Word report.",
-    selected: (n) => `${n} checks selected`, run_case: "Run case", objective: "Objective", requires: "Policy prerequisites", how: "How Check Point Cloud Firewall handles it",
+    selected: (n) => `${n} checks selected`, run_case: "Run case", objective: "Objective", requires: "Policy prerequisites", how: "Check Point notes",
     evidence: "Evidence", test: "Check", expected: "Expected", result: "Result", informative: "informative", ready: "ready", busy: "busy", offline: "offline",
     no_runs: "No runs yet.", finished: "finished", running: "running", report_en: "Report EN", report_es: "Report ES", fail: "failed", info: "info", na: "n/a",
     no_match: "No case matches the search.", no_agent: "No connected client is selected.",
@@ -30,13 +36,20 @@ const I18N = {
     NET: { allowed_site: "Allowed site (shares IP with the blocked FQDN)", allowed_business_site: "Allowed business site", blocked_fqdn: "Blocked FQDN (POL-05)",
       blocked_path: "Blocked path on the allowed site (APP-03)", geo_blocked_url: "URL in a geo-blocked country (IPS-08)", financial_site: "Financial site bypassed from HTTPS Inspection (TLS-05)",
       inspected_site: "Site that must be decrypted (TLS-02/05)", port_test_host: "Host answering on any TCP port", dns_resolver: "Public DNS resolver", exception_port: "Exception port between environments (POL-02)",
-      inspection_ca_match: "Text in the HTTPS Inspection CA name" },
+      c2_test_url: "Vendor C&C test URL (IPS-09, THR-05)", geo_blocked_countries: "Blocked countries (comma separated)", internal_cidr: "Internal range (summary)",
+      inspection_ca_match: "Text in the TLS inspection CA name (empty = from the PEM)" },
   },
   es: {
-    kicker: "Check Point Cloud Firewall · validación de seguridad", title: "Firewall Testkit", tab_tests: "Pruebas", tab_settings: "Configuración",
+    kicker: "Validación de seguridad", title: "Firewall Testkit", tab_tests: "Pruebas", tab_settings: "Configuración",
+    sol_none: "sin solución configurada (Configuración)", compare: "Comparar seleccionadas", compare_es: "ES", compare_help: "Marca dos o más ejecuciones para comparar soluciones.",
+    set_solution: "Solución probada", set_solution_help: "Nombre que aparece en los informes y etiqueta las ejecuciones (p. ej. fabricante y producto). Cámbialo antes de probar otra solución.",
+    sol_name: "Nombre de la solución", sol_vendor: "Fabricante", vendor_cp: "Check Point", vendor_other: "Otro",
+    set_server: "Servidor de pruebas", set_server_help: "IP de workload del servidor de pruebas (se detecta sola). Si el servidor está en uno de los entornos, márcalo abajo.",
+    col_cidr: "CIDR", add_agents: "Añadir clientes conectados",
+    set_ca: "CA de inspección TLS", set_ca_help: "Certificado público (PEM) de la CA con la que la solución re-firma el TLS inspeccionado. Los clientes la añaden a su almacén de confianza y sirve para saber qué certificados se descifraron.",
     clients: "Clientes", no_clients: "Esperando clientes…", search: "Buscar caso o prueba (p. ej. TLS, EICAR, IPS-06)", run_sel: "Ejecutar selección",
     run_all: "Ejecutar todo", runs: "Ejecuciones", runs_help: "Elige una para ver sus resultados junto a cada prueba. Al terminar, descarga el informe en Word.",
-    selected: (n) => `${n} pruebas seleccionadas`, run_case: "Ejecutar caso", objective: "Objetivo", requires: "Requisitos de política", how: "Cómo lo resuelve Check Point Cloud Firewall",
+    selected: (n) => `${n} pruebas seleccionadas`, run_case: "Ejecutar caso", objective: "Objetivo", requires: "Requisitos de política", how: "Notas de Check Point",
     evidence: "Evidencias", test: "Prueba", expected: "Esperado", result: "Resultado", informative: "informativa", ready: "listo", busy: "ocupado", offline: "sin conexión",
     no_runs: "Todavía no hay ejecuciones.", finished: "terminada", running: "en curso", report_en: "Informe EN", report_es: "Informe ES", fail: "fallo", info: "info", na: "n/a",
     no_match: "Ningún caso coincide con la búsqueda.", no_agent: "No hay ningún cliente conectado y seleccionado.",
@@ -57,7 +70,8 @@ const I18N = {
     NET: { allowed_site: "Sitio permitido (comparte IP con el FQDN bloqueado)", allowed_business_site: "Sitio corporativo permitido", blocked_fqdn: "FQDN bloqueado (POL-05)",
       blocked_path: "Ruta bloqueada en el sitio permitido (APP-03)", geo_blocked_url: "URL en un país bloqueado (IPS-08)", financial_site: "Sitio financiero excluido de HTTPS Inspection (TLS-05)",
       inspected_site: "Sitio que debe descifrarse (TLS-02/05)", port_test_host: "Host que responde en cualquier puerto TCP", dns_resolver: "Resolvedor DNS público", exception_port: "Puerto de excepción entre entornos (POL-02)",
-      inspection_ca_match: "Texto del nombre de la CA de HTTPS Inspection" },
+      c2_test_url: "URL de prueba de C&C del fabricante (IPS-09, THR-05)", geo_blocked_countries: "Países bloqueados (separados por comas)", internal_cidr: "Rango interno (resumen)",
+      inspection_ca_match: "Texto del nombre de la CA de inspección (vacío = del PEM)" },
   },
 };
 const MULTI_ROLES = ["prod_envs", "nonprod_envs", "ids_clients", "precedence_clients"];
@@ -67,7 +81,9 @@ if (!I18N[LANG]) LANG = "en";
 const t = (k) => I18N[LANG][k];
 const tr = (x) => (x && typeof x === "object" ? x[LANG] || x.en : x);
 
-let CAT, CONF, AGENTS = [], SEL_AGENTS = new Set(), RUN = null, RUN_ID = null;
+let CAT, CONF, AGENTS = [], SEL_AGENTS = new Set(), RUN = null, RUN_ID = null, PCONF = null;
+const CMP = new Set();
+const isCP = () => /check ?point/i.test(((PCONF && PCONF.solution) || {}).vendor || "");
 const sel = new Set();
 
 // ------------------------------------------------------------------ i18n + tabs
@@ -75,6 +91,8 @@ function applyLang() {
   document.documentElement.lang = LANG;
   $$("[data-i18n]").forEach((el) => (el.textContent = t(el.dataset.i18n)));
   $("#q").placeholder = t("search");
+  const sol = ((PCONF && PCONF.solution) || {}).name;
+  $(".kicker").textContent = t("kicker") + " · " + (sol || t("sol_none"));
   $$(".lang button").forEach((b) => b.classList.toggle("on", b.dataset.lang === LANG));
   if (CAT) { render(); pollRuns(); pollAgents(); }
   if (CONF && !$("#view-settings").hidden) renderSettings();
@@ -89,6 +107,7 @@ $$(".tab").forEach((b) => (b.onclick = () => {
 // ------------------------------------------------------------------ tests view
 async function init() {
   CAT = await api("catalog");
+  try { PCONF = await api("config"); } catch { PCONF = {}; }
   applyLang();
   $("#q").oninput = render;
   $("#runall").onclick = () => launch([], t("run_all"));
@@ -117,7 +136,8 @@ function caseEl(c) {
   $(".badges", el).innerHTML = `<span class="b ${c.priority}">${esc(tr(c.priority_label))}</span>`;
   $(".h-obj", el).textContent = t("objective"); $(".obj", el).textContent = tr(c.objective);
   $(".h-req", el).textContent = t("requires"); $(".req", el).textContent = tr(c.requires);
-  $(".h-how", el).textContent = t("how"); $(".how", el).textContent = tr(c.how);
+  const notes = isCP() && c.vendor_notes && c.vendor_notes.checkpoint;
+  $(".h-how", el).textContent = notes ? t("how") : ""; $(".how", el).textContent = notes ? tr(c.vendor_notes.checkpoint) : "";
   $(".evi", el).textContent = t("evidence") + ": " + tr(c.evidence);
   $(".th-test", el).textContent = t("test"); $(".th-exp", el).textContent = t("expected"); $(".th-res", el).textContent = t("result");
   const ck = $(".case-ck", el), rc = $(".run-case", el);
@@ -163,12 +183,15 @@ async function pollRuns() {
   if (!RUN_ID && runs.length) RUN_ID = runs[0].id;
   $("#runs").innerHTML = runs.map((r) => {
     const c = r.counts, done = Object.values(r.status).every((s) => s === "done");
-    return `<div class="run ${r.id === RUN_ID ? "sel" : ""}" data-id="${r.id}"><div class="t">${esc(r.label)}</div>
+    return `<div class="run ${r.id === RUN_ID ? "sel" : ""}" data-id="${r.id}"><div class="t"><input type="checkbox" class="cmp" data-id="${r.id}" ${CMP.has(r.id) ? "checked" : ""}> ${esc(r.solution || "")} · ${esc(r.label)}</div>
       <div class="m">${r.created.replace("T", " ").replace("Z", " UTC")} · ${r.agents.map((a) => a.toUpperCase()).join(", ")} · ${done ? t("finished") : t("running")}</div>
       <div><span class="pill OK">${c.OK} OK</span><span class="pill FAIL">${c.FAIL + c.ERROR} ${t("fail")}</span><span class="pill INFO">${c.INFO} ${t("info")}</span><span class="pill SKIP">${c.SKIP} ${t("na")}</span></div>
       <div class="dl"><a class="btn sm" href="api/runs/${r.id}/report?lang=en">${t("report_en")}</a><a class="btn sm" href="api/runs/${r.id}/report?lang=es">${t("report_es")}</a><a class="btn sm" href="api/runs/${r.id}/csv">CSV</a></div></div>`;
   }).join("") || `<p class="muted small">${t("no_runs")}</p>`;
-  $$(".run", $("#runs")).forEach((el) => (el.onclick = (e) => { if (e.target.tagName === "A") return; RUN_ID = el.dataset.id; pollRuns(); }));
+  const ids = [...CMP].join(",");
+  $("#cmpbar").innerHTML = `<span class="muted small">${t("compare_help")}</span><div class="dl"><a class="btn sm ${CMP.size < 2 ? "dis" : ""}" href="api/compare?runs=${ids}&lang=en">${t("compare")} EN</a><a class="btn sm ${CMP.size < 2 ? "dis" : ""}" href="api/compare?runs=${ids}&lang=es">${t("compare_es")}</a></div>`;
+  $$(".cmp", $("#runs")).forEach((c) => (c.onclick = (e) => { e.stopPropagation(); c.checked ? CMP.add(c.dataset.id) : CMP.delete(c.dataset.id); pollRuns(); }));
+  $$(".run", $("#runs")).forEach((el) => (el.onclick = (e) => { if (e.target.tagName === "A" || e.target.tagName === "INPUT") return; RUN_ID = el.dataset.id; pollRuns(); }));
   if (RUN_ID) { try { RUN = await api("runs/" + RUN_ID); } catch { RUN = null; } paintResults(); }
 }
 
@@ -210,11 +233,27 @@ function opts(cur_, multi) {
 }
 
 function renderSettings() {
+  CONF.solution = CONF.solution || { name: "", vendor: "" };
+  const sv = /check ?point/i.test(CONF.solution.vendor || "") ? "checkpoint" : "other";
+  $("#solution").innerHTML = `<label><span>${t("sol_name")}</span><input id="solname" value="${esc(CONF.solution.name)}"></label>
+    <label><span>${t("sol_vendor")}</span><select id="solvendor"><option value="checkpoint" ${sv === "checkpoint" ? "selected" : ""}>${t("vendor_cp")}</option><option value="other" ${sv === "other" ? "selected" : ""}>${t("vendor_other")}</option></select></label>`;
+  $("#solname").onchange = (e) => { CONF.solution.name = e.target.value.trim(); syncJson(); };
+  $("#solvendor").onchange = (e) => { CONF.solution.vendor = e.target.value === "checkpoint" ? "checkpoint" : ""; syncJson(); };
+  $("#server").innerHTML = `<label><span>IP</span><input id="srvip" value="${esc(CONF.server_ip || "")}" placeholder="10.0.0.10"></label>`;
+  $("#srvip").onchange = (e) => { CONF.server_ip = e.target.value.trim(); syncJson(); };
+  $("#capem").value = CONF.inspection_ca_pem || "";
+  $("#capem").onchange = (e) => { CONF.inspection_ca_pem = e.target.value.trim() ? e.target.value.trim() + "\n" : ""; syncJson(); };
+  $("#addagents").onclick = async () => {
+    const ag = await api("agents");
+    for (const a of ag) if (a.online && !CONF.environments.some((e) => e.name === (a.env || a.name)))
+      CONF.environments.push({ name: a.env || a.name, ip: a.src || "", cidr: "", az: "", description: "" });
+    renderSettings();
+  };
   CONF.environments = CONF.environments || []; CONF.roles = CONF.roles || {}; CONF.peers = CONF.peers || {}; CONF.internet = CONF.internet || {};
   CONF.segmentation = CONF.segmentation || { allow: {}, always: [] }; CONF.segmentation.allow = CONF.segmentation.allow || {}; CONF.segmentation.always = CONF.segmentation.always || [];
   const tb = $("#envs tbody");
   tb.innerHTML = CONF.environments.map((e, i) => `<tr data-i="${i}">
-    <td><input data-f="name" value="${esc(e.name)}"></td><td><input data-f="ip" value="${esc(e.ip)}" placeholder="10.0.0.10"></td>
+    <td><input data-f="name" value="${esc(e.name)}"></td><td><input data-f="ip" value="${esc(e.ip)}" placeholder="10.0.0.10"></td><td><input data-f="cidr" value="${esc(e.cidr || "")}" placeholder="10.0.0.0/16"></td>
     <td><input data-f="az" value="${esc(e.az || "")}" size="3"></td><td><input data-f="description" value="${esc(e.description || "")}"></td>
     <td class="c"><input type="radio" name="srv" ${CONF.server_env === e.name ? "checked" : ""}></td>
     <td><select data-peer>${opts(CONF.peers[e.name], false)}</select></td><td><button class="btn sm del">✕</button></td></tr>`).join("");
@@ -252,19 +291,22 @@ function renderSettings() {
     const k = s.dataset.role; CONF.roles[k] = MULTI_ROLES.includes(k) ? [...s.selectedOptions].map((o) => o.value) : s.value; syncJson();
   }));
   $("#internet").innerHTML = Object.entries(t("NET")).map(([k, l]) => {
-    const v = k === "inspection_ca_match" ? CONF.inspection_ca_match : CONF.internet[k];
+    const v = k === "inspection_ca_match" ? CONF.inspection_ca_match : k === "internal_cidr" ? CONF.internal_cidr : k === "geo_blocked_countries" ? (CONF.internet[k] || []).join(", ") : CONF.internet[k];
     return `<label><span>${esc(l)}</span><input data-net="${k}" value="${esc(v ?? "")}"></label>`;
   }).join("");
   $$("#internet input").forEach((i) => (i.onchange = () => {
     const k = i.dataset.net, v = i.value.trim();
-    if (k === "inspection_ca_match") CONF.inspection_ca_match = v; else CONF.internet[k] = k === "exception_port" && /^\d+$/.test(v) ? +v : v;
+    if (k === "inspection_ca_match") CONF.inspection_ca_match = v;
+    else if (k === "internal_cidr") CONF.internal_cidr = v;
+    else if (k === "geo_blocked_countries") CONF.internet[k] = v.split(",").map((x) => x.trim()).filter(Boolean);
+    else CONF.internet[k] = k === "exception_port" && /^\d+$/.test(v) ? +v : v;
     syncJson();
   }));
   syncJson();
   $("#applyjson").onclick = () => { try { CONF = JSON.parse($("#json").value); renderSettings(); $("#savemsg").textContent = ""; } catch (e) { $("#savemsg").textContent = e.message; } };
   $("#reload").onclick = loadSettings;
   $("#save").onclick = async () => {
-    try { await api("config", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(CONF) }); $("#savemsg").textContent = t("saved"); }
+    try { await api("config", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(CONF) }); $("#savemsg").textContent = t("saved"); PCONF = JSON.parse(JSON.stringify(CONF)); applyLang(); }
     catch (e) { $("#savemsg").textContent = e.message; }
   };
 }

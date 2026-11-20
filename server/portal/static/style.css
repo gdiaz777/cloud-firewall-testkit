@@ -82,3 +82,6 @@ h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;c
 textarea{width:100%;font:12px ui-monospace,Consolas,monospace;border:1px solid var(--line);border-radius:6px;padding:8px}
 .savebar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);padding:10px 24px;display:flex;gap:10px;justify-content:flex-end;align-items:center}
 @media (max-width:800px){.form{grid-template-columns:1fr}}
+.cmpbar{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+.btn.dis{opacity:.4;pointer-events:none}
+.run .t input{margin:0 4px 0 0}

@@ -1,5 +1,6 @@
 #!/bin/bash
-# Builds the whole policy package from deploy/state/lab.json through the Management API and publishes it.
+# Builds the whole policy package from the testkit configuration ($CONFIG) through the Management API and publishes it.
+# Called by cp-baseline.sh apply (do not run directly).
 # Idempotent: existing objects and rules (by name) are kept. Everything is prefixed TK_ and tagged firewall-testkit.
 #
 #  Access:   Content Awareness (PCI/IBAN, executables, optional DLP exception) → exception port between environments
@@ -9,13 +10,13 @@
 #            exceptions (exception port, IPS-04), optional IDS rule towards the ids_target environment
 #  HTTPS:    outbound CA, testkit CA trusted, own HTTPS layer with bypasses (FQDN, recommended list, sensitive
 #            categories) and Inspect east-west and Internet; server-certificate validation
-. "$(dirname "$0")/../lib.sh"; load_settings
+. "$(dirname "$0")/lib.sh"; load_settings
 cp_login || die "management login failed"
 TAGS='"tags":["firewall-testkit"]'
 NETL="$PKG Network"; TPL="$PKG Threat Prevention"; IL="TK Egress Internet"; HL="TK HTTPS Outbound"
 EW=TK_EastWest; ST=TK_Strict; DT=TK_Detect
 INTERNAL=$(lab '.internal_cidr // "10.0.0.0/8"')
-SRV=$(lab .server_env)
+SRV=$(lab '.server_env // empty')
 role() { lab --arg r "$1" '.roles[$r] // empty | if type=="array" then .[] else . end'; }
 svc() { case $1 in icmp) echo echo-request;; http) echo http;; https) echo https;; ssh) echo ssh;; rdp) echo Remote_Desktop_Protocol;;
         tcp8080) echo HTTP_proxy;; iperf3) echo TK_exception_port;; *) echo "$1";; esac; }
@@ -23,7 +24,8 @@ rule_exists() { cp "show-${1}-rule" "{\"name\":\"$3\",\"layer\":\"$2\"}" | jq -e
 
 log "Objects"
 for e in $(lab '.environments[].name'); do
-  c=$(lab --arg e "$e" '.environments[]|select(.name==$e).cidr')
+  c=$(lab --arg e "$e" '.environments[]|select(.name==$e).cidr // empty')
+  [ -n "$c" ] || die "environment $e has no cidr in the configuration (Settings → Environments → CIDR)"
   exists network "TK_$e" || api add-network "{\"name\":\"TK_$e\",\"subnet\":\"${c%/*}\",\"mask-length\":${c#*/},\"ignore-warnings\":true,$TAGS}"
 done
 ENVS_JSON=$(lab -c '[.environments[].name|"TK_"+.]')
@@ -58,7 +60,7 @@ AR() { local n; n=$(jq -r .name <<<"$2"); rule_exists access "$1" "$n" && return
   api add-access-rule "$(jq -c --arg l "$1" '. + {layer:$l, position:{"above":"Cleanup rule"}, "ignore-warnings":true}' <<<"$2")"; }
 HTTPS2='["http","https"]'
 D=$(role dlp_exception_client)
-[ -n "$D" ] && AR "$NETL" "{\"name\":\"TK DLP exception $D -> $SRV\",\"source\":[\"TK_$D\"],\"destination\":[\"TK_$SRV\"],\"service\":$HTTPS2,\"content\":[\"PCI - Credit Card Numbers\",\"International Bank Account Number - IBAN\"],\"content-direction\":\"up\",\"action\":\"Accept\",\"track\":{\"type\":\"Log\"}}"
+[ -n "$D" ] && [ -n "$SRV" ] && AR "$NETL" "{\"name\":\"TK DLP exception $D -> $SRV\",\"source\":[\"TK_$D\"],\"destination\":[\"TK_$SRV\"],\"service\":$HTTPS2,\"content\":[\"PCI - Credit Card Numbers\",\"International Bank Account Number - IBAN\"],\"content-direction\":\"up\",\"action\":\"Accept\",\"track\":{\"type\":\"Log\"}}"
 AR "$NETL" "{\"name\":\"TK CA - block card numbers and IBAN\",\"source\":[\"TK_Envs\"],\"destination\":[\"TK_Envs\"],\"service\":$HTTPS2,\"content\":[\"PCI - Credit Card Numbers\",\"International Bank Account Number - IBAN\"],\"content-direction\":\"any\",\"action\":\"Drop\",\"track\":{\"type\":\"Log\"}}"
 AR "$NETL" "{\"name\":\"TK CA - block executables\",\"source\":[\"TK_Envs\"],\"destination\":[\"TK_Envs\"],\"service\":$HTTPS2,\"content\":[\"Executable File\"],\"content-direction\":\"any\",\"action\":\"Drop\",\"track\":{\"type\":\"Log\"}}"
 ALW=$(lab -c '[.segmentation.always[]?]'); if [ "$ALW" != "[]" ]; then
@@ -109,7 +111,7 @@ EWR=$(TRB | jq -r 'map(select(.name=="TK east-west"))[0].uid')
 XHAS() { cp show-threat-rule-exception-rulebase "{\"name\":\"$TPL\",\"rule-uid\":\"$EWR\"}" | jq -e --arg n "$1" '[..|objects|select(.name?==$n)]|length>0' >/dev/null; }
 XHAS "TK exception port (not inspected)" || api add-threat-exception "{\"layer\":\"$TPL\",\"rule-uid\":\"$EWR\",\"position\":\"top\",\"name\":\"TK exception port (not inspected)\",\"source\":[\"TK_Envs\"],\"destination\":[\"TK_Envs\"],\"service\":[\"TK_exception_port\"],\"protected-scope\":[\"Any\"],\"protection-or-site\":[\"Any\"],\"action\":\"Inactive\",\"track\":\"None\"}"
 X=$(role ips_exception_client)
-[ -n "$X" ] && { XHAS "TK IPS-04 $X -> $SRV" || api add-threat-exception "{\"layer\":\"$TPL\",\"rule-uid\":\"$EWR\",\"position\":\"top\",\"name\":\"TK IPS-04 $X -> $SRV\",\"source\":[\"TK_$X\"],\"destination\":[\"TK_$SRV\"],\"service\":[\"Any\"],\"protected-scope\":[\"Any\"],\"protection-or-site\":[\"TP-Link Archer AX21 Command Injection (CVE-2023-1389)\"],\"action\":\"Detect\",\"track\":\"Log\"}"; }
+[ -n "$X" ] && [ -n "$SRV" ] && { XHAS "TK IPS-04 $X -> $SRV" || api add-threat-exception "{\"layer\":\"$TPL\",\"rule-uid\":\"$EWR\",\"position\":\"top\",\"name\":\"TK IPS-04 $X -> $SRV\",\"source\":[\"TK_$X\"],\"destination\":[\"TK_$SRV\"],\"service\":[\"Any\"],\"protected-scope\":[\"Any\"],\"protection-or-site\":[\"TP-Link Archer AX21 Command Injection (CVE-2023-1389)\"],\"action\":\"Detect\",\"track\":\"Log\"}"; }
 
 log "HTTPS Inspection"
 DEF=$(cp show-outbound-inspection-certificates '{"details-level":"full"}' | jq -r '[.objects[]?|select(."is-default")][0].name // empty')
@@ -118,12 +120,15 @@ if [ -z "$DEF" ]; then
     '{name:"TK_Outbound_CA", "issued-by":"Firewall Testkit HTTPS Inspection CA", "base64-password":$p, "valid-from":$f, "valid-to":$t, "is-default":true}')"
   DEF=TK_Outbound_CA
 fi
-mkdir -p "$CERTS"
-cp show-outbound-inspection-certificate "{\"name\":\"$DEF\"}" | jq -r '."base64-public-certificate" // empty' > "$CERTS/inspection_ca.crt"
-openssl x509 -in "$CERTS/inspection_ca.crt" -noout 2>/dev/null && ok "inspection CA exported: $(openssl x509 -in "$CERTS/inspection_ca.crt" -noout -subject)" || warn "could not export the inspection CA"
-openssl x509 -in "$CERTS/inspection_ca.crt" -noout -subject -nameopt multiline 2>/dev/null | awk -F'= ' '/commonName/{print $2}' > "$STATE/inspection_ca_cn"
-if cp show-custom-trusted-ca-certificates '{"limit":200,"details-level":"full"}' | jq -e '[.objects[]?|select(tostring|test("Firewall Testkit CA"))]|length>0' >/dev/null; then ok "testkit CA already trusted"
-else api add-custom-trusted-ca-certificate "$(jq -nc --arg c "$(base64 -w0 < "$CERTS/testkit_ca.crt")" '{"base64-certificate":$c}')"; fi
+cp show-outbound-inspection-certificate "{\"name\":\"$DEF\"}" | jq -r '."base64-public-certificate" // empty' > "$OUT/inspection_ca.crt"
+openssl x509 -in "$OUT/inspection_ca.crt" -noout 2>/dev/null && ok "inspection CA exported to checkpoint/out/inspection_ca.crt: $(openssl x509 -in "$OUT/inspection_ca.crt" -noout -subject)" || warn "could not export the inspection CA"
+if [ ! -s "$OUT/testkit_ca.crt" ]; then warn "no testkit CA (use --portal or --testkit-ca): east-west HTTPS to the test server will fail certificate validation"
+else
+  # Compare the whole certificate (every testkit server generates its own CA with the same name)
+  BODY=$(grep -v -- '-----' "$OUT/testkit_ca.crt" | tr -d '\n\r ')
+  if cp show-custom-trusted-ca-certificates '{"limit":500,"details-level":"full"}' | jq -e --arg b "$BODY" '[.objects[]?|select((."base64-certificate"//"")|gsub("-----[A-Z ]+-----|\\s";"")==$b)]|length>0' >/dev/null; then ok "testkit CA already trusted"
+  else api add-custom-trusted-ca-certificate "$(jq -nc --arg c "$(base64 -w0 < "$OUT/testkit_ca.crt")" '{"base64-certificate":$c}')"; fi
+fi
 exists https-layer "$HL" || api add-https-layer "{\"name\":\"$HL\",\"shared\":false,$TAGS}"
 HRB() { cp show-https-rulebase "{\"name\":\"$HL\",\"limit\":100}" | jq -c '[.rulebase[] | if .type=="https-section" then .rulebase[] else . end]'; }
 H() { local n; n=$(jq -r .name <<<"$1"); HRB | jq -e --arg n "$n" 'map(select(.name==$n))|length>0' >/dev/null && return 0

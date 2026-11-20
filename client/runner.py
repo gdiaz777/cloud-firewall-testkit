@@ -21,7 +21,10 @@ LANG = os.environ.get("LANG_TESTKIT", "en")
 TIMEOUT = int(os.environ.get("TIMEOUT", "8"))
 CERTS = "/opt/testkit/certs"
 PUBLIC_BUNDLE = "/opt/testkit/public-ca-bundle.crt"     # public CAs without the inspection CA
-BLOCK_MARKERS = re.compile(r"usercheck|access to this (web ?site|application) is blocked|this (web ?site|page) (is|has been) blocked|blocked by (your|the) (organization|administrator)", re.I)
+# Block pages of different vendors (Check Point UserCheck, FortiGuard, PAN-OS, Zscaler, Netskope, generic proxies)
+BLOCK_MARKERS = re.compile(r"usercheck|access to this (web ?site|application|page) (is|has been) blocked|this (web ?site|page|url) (is|has been) blocked|"
+                           r"blocked by (your|the) (organization|organisation|administrator|security policy)|web page blocked|fortiguard|"
+                           r"application blocked|request (was|has been) blocked|access denied by policy", re.I)
 
 
 def now():
@@ -34,10 +37,67 @@ def norm_cfg(conf):
     srv_env = conf.get("server_env", "")
     return dict(server=conf.get("server_ip") or envs.get(srv_env, ""), server_env=srv_env, envs=envs,
                 roles=conf.get("roles", {}), peers=conf.get("peers", {}), internet=conf.get("internet", {}),
-                segmentation=conf.get("segmentation", {}), inspection_ca_match=conf.get("inspection_ca_match") or "HTTPS Inspection")
+                segmentation=conf.get("segmentation", {}), inspection_ca_match=conf.get("inspection_ca_match") or ca_cn(conf.get("inspection_ca_pem", "")),
+                inspection_ca_pem=conf.get("inspection_ca_pem", ""))
+
+
+def ca_cn(pem):
+    """CN of the TLS inspection CA configured in the portal (empty if none)."""
+    if not pem.strip():
+        return ""
+    p = subprocess.run(["openssl", "x509", "-noout", "-subject", "-nameopt", "multiline"], input=pem.encode(), capture_output=True)
+    m = re.search(rb"commonName\s*=\s*(.+)", p.stdout)
+    return m.group(1).decode().strip() if m else ""
+
+
+_PUBLIC_CNS = None
+
+
+def public_issuer(issuer):
+    """True if the issuer is a public CA (in the bundle without the inspection CA) or the testkit CA."""
+    global _PUBLIC_CNS
+    if _PUBLIC_CNS is None:
+        _PUBLIC_CNS = set()
+        try:
+            pems = re.findall(r"-----BEGIN CERTIFICATE-----.+?-----END CERTIFICATE-----", open(PUBLIC_BUNDLE).read(), re.S)
+            for pem in pems:
+                cn = ca_cn(pem)
+                if cn:
+                    _PUBLIC_CNS.add(cn)
+        except OSError:
+            pass
+    if "Firewall Testkit CA" in issuer:
+        return True
+    m = re.search(r"CN\s*=\s*([^,/]+)", issuer)
+    cn = m.group(1).strip() if m else issuer
+    # Public intermediates are not in the bundle: treat well-known public issuers by organisation as public
+    return cn in _PUBLIC_CNS or bool(re.search(r"O\s*=\s*(DigiCert|Let's Encrypt|Sectigo|GlobalSign|Amazon|Google Trust Services|Entrust|GoDaddy|Microsoft|Cloudflare|ZeroSSL|Certum|IdenTrust|Buypass|HARICA|SSL\.com)", issuer))
+
+
+INSTALLED_CA = None
+
+
+def install_inspection_ca(pem):
+    """Adds the TLS inspection CA from the portal configuration to the container trust store (TLS-02)."""
+    global INSTALLED_CA
+    if not pem.strip() or pem == INSTALLED_CA:
+        return
+    with open("/usr/local/share/ca-certificates/testkit_inspection_ca.crt", "w") as f:
+        f.write(pem)
+    subprocess.run(["update-ca-certificates"], capture_output=True)
+    INSTALLED_CA = pem
 
 
 def load_cfg():
+    """CLI mode: configuration from the portal (PORTAL_URL) or, if unreachable, from TESTKIT_CONFIG."""
+    url = os.environ.get("PORTAL_URL")
+    if url:
+        try:
+            with urllib.request.urlopen(url.rstrip("/") + "/api/config", timeout=10) as r:
+                conf = json.load(r)
+            c = norm_cfg(conf); install_inspection_ca(c["inspection_ca_pem"]); return c
+        except Exception:  # noqa
+            pass
     path = os.environ.get("TESTKIT_CONFIG", "/opt/testkit/config/config.json")
     try:
         return norm_cfg(json.load(open(path, encoding="utf-8")))
@@ -234,7 +294,8 @@ def t_tls_issuer(c, cfg):
         issuer, ver = peer_cert(subst(c["host"], cfg), subst(c["sni"], cfg), c.get("tls"))
     except Exception as e:  # noqa
         return "BLOCK", f"handshake failed: {e}"
-    insp = cfg["inspection_ca_match"] in issuer
+    match = cfg.get("inspection_ca_match")
+    insp = (match in issuer) if match else not public_issuer(issuer)
     return ("INSPECTED" if insp else "NOT_INSPECTED"), f"{ver}; issuer: {issuer}"
 
 
@@ -394,7 +455,7 @@ def applicable(c, cfg):
         return f"only from: {', '.join(e.upper() for r in c['roles'] for e in role_envs(cfg, r)) or '-'}"
     if c.get("skip_roles") and any(ENV in role_envs(cfg, r) for r in c["skip_roles"]):
         return f"not from {ENV.upper()} (policy exception for this environment)"
-    if c.get("skip_if_server") and ENV == cfg["server_env"]:
+    if c.get("skip_if_server") and (ENV == cfg["server_env"] or SRC == cfg["server"]):
         return "client in the same environment as the server (does not cross the firewall)"
     return None
 
@@ -468,7 +529,7 @@ def agent():
             job = call(f"/api/agent/poll?agent={name}&env={ENV}&src={SRC}", dict(agent=name, env=ENV, src=SRC))
             if not job.get("run_id"):
                 continue
-            cfg = norm_cfg(job.get("config") or {})
+            cfg = norm_cfg(job.get("config") or {}); install_inspection_ca(cfg["inspection_ca_pem"])
             checks = plan(cat, job.get("ids") or [], cfg)
             call("/api/agent/start", dict(run_id=job["run_id"], agent=name, total=len(checks), env=ENV, src=SRC))
             for c in checks:

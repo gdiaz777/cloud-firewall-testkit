@@ -44,7 +44,7 @@ R_MTLS = ["--resolve", f"{MTLS}:443:{S}"]
 SRV = dict(skip_if_server=True)
 SQLI = "/index.php?id=1%27%20UNION%20SELECT%20username,password%20FROM%20users--"
 XSS = "/search?q=%3Cscript%3Ealert(1)%3C/script%3E"
-AB_URL = "http://sc1.checkpoint.com/za/images/threatwiki/pages/TestAntiBotBlade.html"
+AB_URL = "{NET:c2_test_url}"   # vendor test URL for C&C detection (configurable: each vendor has its own)
 
 
 def http(name, expect, url, args=None, explain=None, blade="", **kw):
@@ -272,8 +272,8 @@ case("IPS-09", "high", T("C&C y botnets", "C&C and botnets"),
      T("El tráfico hacia indicadores de C&C se bloquea.", "Traffic to C&C indicators is blocked."),
      T("Anti-Bot bloquea por reputación de dominio, IP y URL (ThreatCloud) y por patrones de comunicación.", "Anti-Bot blocks by domain, IP and URL reputation (ThreatCloud) and by communication patterns."),
      T("Anti-Bot en el perfil de salida.", "Anti-Bot in the egress profile."), EVI_STD, [
-         http(T("Página de prueba de Anti-Bot de Check Point", "Check Point Anti-Bot test page"), "BLOCK", AB_URL, explain=T("URL de prueba clasificada como C&C.", "Test URL classified as C&C."), blade="Anti-Bot"),
-         http(T("Control: www.checkpoint.com", "Control: www.checkpoint.com"), "ALLOW", "http://www.checkpoint.com/", explain=E_CTRL, blade="Anti-Bot"),
+         http(T("URL de prueba de C&C del fabricante", "Vendor C&C test URL"), "BLOCK", AB_URL, explain=T("URL de prueba que el fabricante clasifica como C&C (configurable en Destinos en Internet).", "Test URL the vendor classifies as C&C (configurable in Internet targets)."), blade="Anti-Bot"),
+         http(T("Control: sitio corporativo permitido", "Control: allowed business site"), "ALLOW", "http://{NET:allowed_business_site}/", explain=E_CTRL, blade="Anti-Bot"),
      ])
 case("IPS-11", "high", T("Política diferenciada IDS frente a IPS", "IDS vs IPS differentiated policy"),
      T("El modo detección no bloquea; el de prevención sí; ambos registran.", "Detect mode does not block; prevent mode does; both log."),
@@ -335,7 +335,7 @@ case("TLS-02", "high", T("CA de inspección y cadena de confianza", "Inspection 
      T("Solo los clientes que confían en la CA funcionan; no hay bypass encubierto.", "Only clients trusting the CA work; there is no hidden bypass."),
      T("La CA de inspección se distribuye a los clientes; un cliente sin ella recibe un error de certificado.", "The inspection CA is distributed to clients; a client without it gets a certificate error."), REQ_HTTPSI, EVI_STD, [
          chk("tls_issuer", T("Certificado sustituido en Internet", "Certificate replaced on the Internet"), "INSPECTED", T("La web llega firmada por la CA de inspección.", "The site arrives signed by the inspection CA."), "HTTPSi", host="{NET:inspected_site}", sni="{NET:inspected_site}"),
-         chk("tls_verify", T("Cliente con la CA de inspección", "Client with the inspection CA"), "VALID", T("Valida con la CA de Check Point en su almacén.", "Validates with the Check Point CA in its store."), "HTTPSi", url="https://{NET:inspected_site}/", bundle="system"),
+         chk("tls_verify", T("Cliente con la CA de inspección", "Client with the inspection CA"), "VALID", T("Valida con la CA de inspección en su almacén.", "Validates with the inspection CA in its store."), "HTTPSi", url="https://{NET:inspected_site}/", bundle="system"),
          chk("tls_verify", T("Cliente sin la CA de inspección", "Client without the inspection CA"), "INVALID", T("Solo CA públicas: falla.", "Public CAs only: fails."), "HTTPSi", url="https://{NET:inspected_site}/", bundle="public"),
      ])
 case("TLS-03", "high", T("Certificados caducados, revocados o no confiables", "Expired, revoked or untrusted certificates"),
@@ -498,6 +498,33 @@ n = 0
 for c in C:
     for i, ch in enumerate(c["checks"], 1):
         ch["id"] = f"{c['id']}.{i}"; n += 1
+# ------------------------------------------------------------------ vendor-neutral wording
+# The catalog is used to compare security solutions: generic capability names, and the Check Point specific
+# explanation ("how") is kept apart in vendor_notes.checkpoint (shown only when the solution under test is Check Point).
+CAP = {"HTTPSi": "TLS inspection", "App Control": "Application control", "Content Awareness": "DLP", "Anti-Virus": "Anti-malware",
+       "Anti-Bot": "Anti-bot (C&C)", "IPS → CloudGuard WAF": "IPS → WAF", "AV": "Anti-malware", "HTTPSi (bypass)": "TLS inspection (bypass)"}
+WORDS = {"en": [("Content Awareness", "DLP (content inspection)"), ("HTTPS Inspection", "TLS inspection"), ("Threat Prevention", "threat prevention"),
+                ("'match by protocol signature'", "protocol identification (not only the port)"), ("App Control", "application control")],
+         "es": [("Content Awareness", "DLP (inspección de contenido)"), ("HTTPS Inspection", "inspección TLS"), ("Threat Prevention", "prevención de amenazas"),
+                ("'match by protocol signature'", "identificación por protocolo (no solo por puerto)"), ("App Control", "control de aplicaciones")]}
+
+
+def neutral(t):
+    return {l: (lambda x: [x := x.replace(a, b) for a, b in WORDS[l]][-1])(v) if isinstance(v, str) else v for l, v in t.items()}
+
+
+def capability(b):
+    return " / ".join(CAP.get(p.strip(), p.strip()) for p in b.split(" / "))
+
+
+for c in C:
+    c["vendor_notes"] = {"checkpoint": c.pop("how")}
+    for f in ("objective", "requires", "evidence"):
+        c[f] = neutral(c[f])
+    for k in c["checks"]:
+        k["blade"] = capability(k.get("blade", ""))
+        k["explain"] = neutral(k["explain"]); k["name"] = neutral(k["name"])
+
 PRIO = {"critical": T("Crítica", "Critical"), "high": T("Alta", "High"), "medium": T("Media", "Medium")}
 for c in C:
     c["priority_label"] = PRIO[c["priority"]]

@@ -1,32 +1,98 @@
 {
+  "solution": {
+    "name": "Check Point Cloud Firewall",
+    "vendor": "checkpoint"
+  },
   "server_env": "comm",
   "environments": [
-    {"name": "pro",  "ip": "10.0.0.92", "az": "b", "description": "Production"},
-    {"name": "pre",  "ip": "10.1.0.50", "az": "a", "description": "Pre-production"},
-    {"name": "dev",  "ip": "10.2.0.84", "az": "b", "description": "Development"},
-    {"name": "comm", "ip": "10.3.0.6",  "az": "a", "description": "Shared services (test server)"}
+    {
+      "name": "pro",
+      "ip": "10.0.0.92",
+      "az": "b",
+      "description": "Production",
+      "cidr": "10.0.0.0/16"
+    },
+    {
+      "name": "pre",
+      "ip": "10.1.0.50",
+      "az": "a",
+      "description": "Pre-production",
+      "cidr": "10.1.0.0/16"
+    },
+    {
+      "name": "dev",
+      "ip": "10.2.0.84",
+      "az": "b",
+      "description": "Development",
+      "cidr": "10.2.0.0/16"
+    },
+    {
+      "name": "comm",
+      "ip": "10.3.0.6",
+      "az": "a",
+      "description": "Shared services (test server)",
+      "cidr": "10.3.0.0/16"
+    }
   ],
   "segmentation": {
     "allow": {
-      "pre>dev": ["icmp", "http", "https", "ssh"],
-      "dev>pre": ["icmp", "http", "https", "ssh"],
-      "pro>comm": ["icmp", "http", "https"],
-      "pre>comm": ["icmp", "http", "https"],
-      "dev>comm": ["icmp", "http", "https"]
+      "pre>dev": [
+        "icmp",
+        "http",
+        "https",
+        "ssh"
+      ],
+      "dev>pre": [
+        "icmp",
+        "http",
+        "https",
+        "ssh"
+      ],
+      "pro>comm": [
+        "icmp",
+        "http",
+        "https"
+      ],
+      "pre>comm": [
+        "icmp",
+        "http",
+        "https"
+      ],
+      "dev>comm": [
+        "icmp",
+        "http",
+        "https"
+      ]
     },
-    "always": ["iperf3"]
+    "always": [
+      "iperf3"
+    ]
   },
   "roles": {
-    "prod_envs": ["pro"],
-    "nonprod_envs": ["pre", "dev"],
+    "prod_envs": [
+      "pro"
+    ],
+    "nonprod_envs": [
+      "pre",
+      "dev"
+    ],
     "ids_target": "dev",
-    "ids_clients": ["pre"],
+    "ids_clients": [
+      "pre"
+    ],
     "ips_exception_client": "pro",
     "dlp_exception_client": "dev",
     "precedence_target": "pro",
-    "precedence_clients": ["pre", "dev"]
+    "precedence_clients": [
+      "pre",
+      "dev"
+    ]
   },
-  "peers": {"pre": "dev", "dev": "pre", "pro": "comm"},
+  "peers": {
+    "pre": "dev",
+    "dev": "pre",
+    "pro": "comm"
+  },
   "internet": {
     "allowed_site": "www.example.com",
     "allowed_business_site": "www.checkpoint.com",
@@ -37,7 +103,15 @@
     "inspected_site": "www.wikipedia.org",
     "port_test_host": "portquiz.net",
     "dns_resolver": "1.1.1.1",
-    "exception_port": 5201
+    "exception_port": 5201,
+    "geo_blocked_countries": [
+      "North Korea",
+      "Iran",
+      "Russia"
+    ],
+    "c2_test_url": "http://sc1.checkpoint.com/za/images/threatwiki/pages/TestAntiBotBlade.html"
   },
-  "inspection_ca_match": "HTTPS Inspection"
+  "inspection_ca_match": "HTTPS Inspection",
+  "internal_cidr": "10.0.0.0/8",
+  "inspection_ca_pem": ""
 }

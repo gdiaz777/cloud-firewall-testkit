@@ -1,0 +1,36 @@
+{
+  "solution": {
+    "name": "",
+    "vendor": ""
+  },
+  "server_ip": "",
+  "server_env": "",
+  "environments": [],
+  "segmentation": {
+    "allow": {},
+    "always": []
+  },
+  "roles": {},
+  "peers": {},
+  "internet": {
+    "allowed_site": "www.example.com",
+    "allowed_business_site": "www.wikipedia.org",
+    "blocked_fqdn": "www.example.org",
+    "blocked_path": "/testkit-blocked",
+    "geo_blocked_url": "http://yandex.ru/",
+    "geo_blocked_countries": [
+      "North Korea",
+      "Iran",
+      "Russia"
+    ],
+    "financial_site": "www.bbva.es",
+    "inspected_site": "www.wikipedia.org",
+    "port_test_host": "portquiz.net",
+    "dns_resolver": "1.1.1.1",
+    "exception_port": 5201,
+    "c2_test_url": "http://sc1.checkpoint.com/za/images/threatwiki/pages/TestAntiBotBlade.html"
+  },
+  "internal_cidr": "10.0.0.0/8",
+  "inspection_ca_match": "",
+  "inspection_ca_pem": ""
+}

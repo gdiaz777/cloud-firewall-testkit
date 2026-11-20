@@ -12,23 +12,23 @@ const tr = (x) => (x && typeof x === "object" ? x[LANG] || x.en : x || "");
 
 const T = {
   en: {
-    kicker: "CHECK POINT CLOUD FIREWALL · SECURITY VALIDATION", title: "Security test report", footer: "Check Point Software Technologies · Confidential · Page ",
-    subtitle: "Results of the Firewall Testkit run against Check Point Cloud Firewall", contents: "Contents",
+    kicker: "FIREWALL TESTKIT · SECURITY VALIDATION", title: "Security test report", footer: "Firewall Testkit · Confidential · Page ",
+    subtitle: (s) => `Results of the security checks against ${s}`, contents: "Contents", solution: "Solution under test",
     run: "Run", date: "Date", clients: "Test clients", server: "Server",
     s1: "Executive summary",
     lead: (n, c, who, ok, ev, info) => `**${n} automated checks** of **${c} test cases** were run from ${who}. **${ok} of ${ev}** returned the expected result${info ? ` and ${info} are measurements or informative checks` : ""}.`,
     k_exp: "Expected result", k_cases: "Cases passing", k_https: "Checks over HTTPS", k_bad: "Unexpected results",
-    f1: "Figure 1. Overall result.", f2: "Figure 2. Result by domain.", f3: "Figure 3. Checks by Check Point blade.", f4: "Figure 4. Attacks and content blocked over HTTP and inside HTTPS.",
+    f1: "Figure 1. Overall result.", f2: "Figure 2. Result by domain.", f3: "Figure 3. Checks by security capability.", f4: "Figure 4. Attacks and content blocked over HTTP and inside HTTPS.",
     case: "Case", test: "Test", result: "Result", checks: "Checks", measure: "measure", unexpected: "Unexpected results",
     unexpected_line: (r, exp, obs) => `**${r.id}** ${r.name} (${r.agent.toUpperCase()}): expected ${exp}, observed ${obs}. ${r.detail}`,
     s2: "How it was tested",
     method: "The kit is two Docker containers: a **server** that publishes test content over HTTP and HTTPS (EICAR, benign files, synthetic data, services on unauthorized ports) plus this portal, and one or more **clients** (agents) in the environments. Every check leaves from the client's workload IP, crosses the firewall and reaches the server or the Internet.",
-    legend: ["**Allowed / Blocked**: blocked means reset or dropped connection, or a Check Point block page (UserCheck).",
-      "**Decrypted / Not decrypted**: the issuer of the received certificate is (or is not) the firewall's HTTPS Inspection CA.",
+    legend: ["**Allowed / Blocked**: blocked means reset or dropped connection, or a block page of the solution under test.",
+      "**Decrypted / Not decrypted**: the issuer of the received certificate is (or is not) the TLS inspection CA of the solution under test.",
       "**Measure**: characterization checks (MTU, HTTPS Inspection overhead) without a pass threshold.",
       "**Informative**: classes the catalog assigns to a WAF; run to document IPS coverage.",
       "**Not applicable**: the check does not apply to that client (e.g., from the server environment to itself, or not configured)."],
-    asked: "Objective.", how: "How Check Point Cloud Firewall handles it.", req: "Policy prerequisites.",
+    asked: "Objective.", how: "Check Point notes.", req: "Policy prerequisites.",
     c_id: "#", c_check: "Check", c_client: "Client", c_exp: "Expected", c_obs: "Observed", c_res: "Result", c_det: "Detail",
     annex: "Annex: run data", field: "Field", value: "Value", start: "Start", client: "Client", envs: "Environments", catalog: "Catalog",
     catline: (n, k) => `${n} cases, ${k} automated checks`, notfinished: "not finished",
@@ -38,23 +38,23 @@ const T = {
       CHANGED: "IP changed", LIMITED: "Authorized only", EXPOSED: "Exposed", MEASURE: "Measure", NO_FLOW: "No flow", FLOW: "Flow", ERROR: "Error", "-": "—" },
   },
   es: {
-    kicker: "CHECK POINT CLOUD FIREWALL · VALIDACIÓN DE SEGURIDAD", title: "Informe de pruebas de seguridad", footer: "Check Point Software Technologies · Confidencial · Página ",
-    subtitle: "Resultados del Firewall Testkit sobre Check Point Cloud Firewall", contents: "Contenido",
+    kicker: "FIREWALL TESTKIT · VALIDACIÓN DE SEGURIDAD", title: "Informe de pruebas de seguridad", footer: "Firewall Testkit · Confidencial · Página ",
+    subtitle: (s) => `Resultados de las pruebas de seguridad sobre ${s}`, contents: "Contenido", solution: "Solución probada",
     run: "Ejecución", date: "Fecha", clients: "Clientes de prueba", server: "Servidor",
     s1: "Resumen ejecutivo",
     lead: (n, c, who, ok, ev, info) => `Se ejecutaron **${n} comprobaciones automáticas** de **${c} casos de prueba** desde ${who}. **${ok} de ${ev}** dieron el resultado esperado${info ? ` y ${info} son medidas o pruebas informativas` : ""}.`,
     k_exp: "Resultado esperado", k_cases: "Casos que cumplen", k_https: "Pruebas sobre HTTPS", k_bad: "Resultados no esperados",
-    f1: "Figura 1. Resultado global.", f2: "Figura 2. Resultado por dominio.", f3: "Figura 3. Comprobaciones por blade de Check Point.", f4: "Figura 4. Ataques y contenidos bloqueados por HTTP y dentro de HTTPS.",
+    f1: "Figura 1. Resultado global.", f2: "Figura 2. Resultado por dominio.", f3: "Figura 3. Comprobaciones por capacidad de seguridad.", f4: "Figura 4. Ataques y contenidos bloqueados por HTTP y dentro de HTTPS.",
     case: "Caso", test: "Prueba", result: "Resultado", checks: "Comprobaciones", measure: "medida", unexpected: "Resultados no esperados",
     unexpected_line: (r, exp, obs) => `**${r.id}** ${r.name} (${r.agent.toUpperCase()}): esperado ${exp}, observado ${obs}. ${r.detail}`,
     s2: "Cómo se ha probado",
     method: "El kit son dos contenedores Docker: un **servidor** que publica contenido de prueba por HTTP y HTTPS (EICAR, ficheros benignos, datos sintéticos, servicios en puertos no autorizados) y este portal, y uno o varios **clientes** (agentes) en los entornos. Cada comprobación sale de la IP de workload del cliente, atraviesa el firewall y llega al servidor o a Internet.",
-    legend: ["**Permitido / Bloqueado**: bloqueado significa conexión reiniciada o descartada, o página de bloqueo de Check Point (UserCheck).",
-      "**Descifrado / Sin descifrar**: el emisor del certificado recibido es (o no) la CA de HTTPS Inspection del firewall.",
+    legend: ["**Permitido / Bloqueado**: bloqueado significa conexión reiniciada o descartada, o página de bloqueo de la solución probada.",
+      "**Descifrado / Sin descifrar**: el emisor del certificado recibido es (o no) la CA de inspección TLS de la solución probada.",
       "**Medida**: pruebas de caracterización (MTU, sobrecoste de HTTPS Inspection) sin umbral de aprobado.",
       "**Informativa**: clases que el catálogo atribuye a un WAF; se ejecutan para documentar la cobertura del IPS.",
       "**No aplica**: la comprobación no corresponde a ese cliente (por ejemplo, desde el entorno del servidor hacia sí mismo, o sin configurar)."],
-    asked: "Objetivo.", how: "Cómo lo resuelve Check Point Cloud Firewall.", req: "Requisitos de política.",
+    asked: "Objetivo.", how: "Notas de Check Point.", req: "Requisitos de política.",
     c_id: "#", c_check: "Comprobación", c_client: "Cliente", c_exp: "Esperado", c_obs: "Observado", c_res: "Resultado", c_det: "Detalle",
     annex: "Anexo: datos de la ejecución", field: "Campo", value: "Valor", start: "Inicio", client: "Cliente", envs: "Entornos", catalog: "Catálogo",
     catline: (n, k) => `${n} casos, ${k} comprobaciones automáticas`, notfinished: "sin terminar",
@@ -72,7 +72,7 @@ const results = Object.entries(run.agents).flatMap(([a, ag]) => ag.results.map((
 const exec = results.filter((r) => r.status !== "SKIP");
 const cnt = (f) => exec.filter(f).length;
 const ok = cnt((r) => r.status === "OK"), bad = cnt((r) => r.status === "FAIL" || r.status === "ERROR"), info = cnt((r) => r.status === "INFO");
-const httpsBlock = exec.filter((r) => (r.blade || "").includes("HTTPSi") && r.status !== "INFO");
+const httpsBlock = exec.filter((r) => (r.blade || "").includes("TLS inspection") && r.status !== "INFO");
 const httpsOk = httpsBlock.filter((r) => r.status === "OK").length;
 const caseIds = cat.cases.map((c) => c.id).filter((id) => exec.some((r) => r.case === id));
 const verdict = (id) => {
@@ -84,10 +84,12 @@ const verdict = (id) => {
 const verdicts = caseIds.map(verdict);
 const who = Object.entries(run.agents).map(([n, a]) => `${(a.env || n).toUpperCase()} (${a.src || "?"})`).join(", ");
 const cfg = run.config || {};
+const SOL = run.solution || (cfg.solution || {}).name || (LANG === "es" ? "la solución probada" : "the solution under test");
+const isCP = /check ?point/i.test(((cfg.solution || {}).vendor || "") + " " + SOL);
 const srvIp = cfg.server_ip || (cfg.environments || []).find((e) => e.name === cfg.server_env)?.ip || "";
 
 const children = [
-  ...L.cover({ kicker: T.kicker, title: T.title, subtitle: T.subtitle, meta: [[T.run, `${run.label} · ${run.id}`], [T.date, fmtDate(run.created)], [T.clients, who], [T.server, srvIp]] }),
+  ...L.cover({ kicker: T.kicker, title: T.title, subtitle: T.subtitle(SOL), meta: [[T.solution, SOL], [T.run, `${run.label} · ${run.id}`], [T.date, fmtDate(run.created)], [T.clients, who], [T.server, srvIp]] }),
   ...L.toc(T.contents),
   L.H1(`1. ${T.s1}`),
   L.P(T.lead(exec.length, caseIds.length, who, ok, ok + bad, info)),
@@ -123,7 +125,7 @@ for (const d of cat.domains) {
     const c = casesById[id];
     children.push(L.H2(`${id} · ${tr(c.title)}`));
     children.push(L.P(`**${T.asked}** ${tr(c.objective)}`));
-    children.push(L.P(`**${T.how}** ${tr(c.how)}`));
+    if (isCP && c.vendor_notes && c.vendor_notes.checkpoint) children.push(L.P(`**${T.how}** ${tr(c.vendor_notes.checkpoint)}`));
     children.push(L.P(`**${T.req}** ${tr(c.requires)}`, { color: "4B5563" }));
     const cols = [{ h: T.c_id, w: 0.45 }, { h: T.c_check, w: 2.3 }, ...(multi ? [{ h: T.c_client, w: 0.75 }] : []), { h: T.c_exp, w: 1.05 }, { h: T.c_obs, w: 1.05 }, { h: T.c_res, w: 1, status: true }, { h: T.c_det, w: 2.8 }];
     children.push(L.table(cols, results.filter((r) => r.case === id).map((r) => [r.id.replace(id + ".", ""), r.name, ...(multi ? [(r.env || r.agent).toUpperCase()] : []),

@@ -75,10 +75,6 @@
     "es": "Los flujos entre entornos atraviesan el firewall en ambos sentidos y se permiten o deniegan según la matriz.",
     "en": "Traffic between environments crosses the firewall in both directions and is allowed or denied according to the matrix."
    },
-   "how": {
-    "es": "El tráfico entre VPC pasa por el Transit Gateway hacia la VPC de inspección (GWLBe) y el Gateway Load Balancer lo entrega a Check Point Cloud Firewall. Cada decisión queda registrada con la regla que la tomó.",
-    "en": "Traffic between VPCs goes through the Transit Gateway to the inspection VPC (GWLBe) and the Gateway Load Balancer hands it to Check Point Cloud Firewall. Every decision is logged with the rule that made it."
-   },
    "requires": {
     "es": "Regla que permite ICMP, HTTP y HTTPS hacia el entorno del servidor y deniega el resto.",
     "en": "Rule allowing ICMP, HTTP and HTTPS to the server environment and denying everything else."
@@ -207,6 +203,12 @@
      "id": "NET-01.7"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "El tráfico entre VPC pasa por el Transit Gateway hacia la VPC de inspección (GWLBe) y el Gateway Load Balancer lo entrega a Check Point Cloud Firewall. Cada decisión queda registrada con la regla que la tomó.",
+     "en": "Traffic between VPCs goes through the Transit Gateway to the inspection VPC (GWLBe) and the Gateway Load Balancer hands it to Check Point Cloud Firewall. Every decision is logged with the rule that made it."
+    }
+   },
    "priority_label": {
     "es": "Crítica",
     "en": "Critical"
@@ -223,10 +225,6 @@
    "objective": {
     "es": "La salida a Internet se inspecciona de forma centralizada; solo pasa lo previsto.",
     "en": "Internet egress is inspected centrally; only the expected traffic passes."
-   },
-   "how": {
-    "es": "Salida centralizada (spoke → TGW → inspección → VPC de salida con NAT Gateway). En el firewall, una capa en línea permite HTTP/HTTPS (con firma de protocolo) y DNS, y deniega el resto.",
-    "en": "Centralized egress (spoke → TGW → inspection → egress VPC with NAT Gateway). On the firewall an inline layer allows HTTP/HTTPS (protocol signature) and DNS and denies the rest."
    },
    "requires": {
     "es": "Capa de salida que permite solo HTTP, HTTPS y DNS.",
@@ -266,7 +264,7 @@
       "es": "Control: tráfico legítimo, no debe bloquearse.",
       "en": "Control: legitimate traffic, must not be blocked."
      },
-     "blade": "Firewall / HTTPSi",
+     "blade": "Firewall / TLS inspection",
      "id": "NET-03.2"
     },
     {
@@ -331,6 +329,12 @@
      "id": "NET-03.6"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "Salida centralizada (spoke → TGW → inspección → VPC de salida con NAT Gateway). En el firewall, una capa en línea permite HTTP/HTTPS (con firma de protocolo) y DNS, y deniega el resto.",
+     "en": "Centralized egress (spoke → TGW → inspection → egress VPC with NAT Gateway). On the firewall an inline layer allows HTTP/HTTPS (protocol signature) and DNS and denies the rest."
+    }
+   },
    "priority_label": {
     "es": "Crítica",
     "en": "Critical"
@@ -347,10 +351,6 @@
    "objective": {
     "es": "Ida y vuelta de un flujo entre AZ distintas llegan al mismo contexto stateful.",
     "en": "Both directions of a cross-AZ flow reach the same stateful context."
-   },
-   "how": {
-    "es": "Con el attachment de inspección en appliance mode, ambos sentidos usan el mismo GWLBe y el GWLB los entrega al mismo gateway; la sesión no se rompe.",
-    "en": "With the inspection attachment in appliance mode both directions use the same GWLBe and the GWLB delivers them to the same gateway; the session is not broken."
    },
    "requires": {
     "es": "Pares de entornos en AZ distintas (configuración) con HTTP permitido entre ellos.",
@@ -381,6 +381,12 @@
      "id": "NET-05.1"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "Con el attachment de inspección en appliance mode, ambos sentidos usan el mismo GWLBe y el GWLB los entrega al mismo gateway; la sesión no se rompe.",
+     "en": "With the inspection attachment in appliance mode both directions use the same GWLBe and the GWLB delivers them to the same gateway; the session is not broken."
+    }
+   },
    "priority_label": {
     "es": "Crítica",
     "en": "Critical"
@@ -397,10 +403,6 @@
    "objective": {
     "es": "No hay tráfico entre producción y no producción salvo las excepciones aprobadas.",
     "en": "No traffic between production and non-production except approved exceptions."
-   },
-   "how": {
-    "es": "Los entornos se definen por CIDR y reglas explícitas bloquean producción ↔ no producción en ambos sentidos.",
-    "en": "Environments are defined by CIDR and explicit rules block production ↔ non-production in both directions."
    },
    "requires": {
     "es": "Roles prod_envs y nonprod_envs y la matriz de segmentación.",
@@ -427,6 +429,12 @@
      "id": "NET-07.1"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "Los entornos se definen por CIDR y reglas explícitas bloquean producción ↔ no producción en ambos sentidos.",
+     "en": "Environments are defined by CIDR and explicit rules block production ↔ non-production in both directions."
+    }
+   },
    "priority_label": {
     "es": "Crítica",
     "en": "Critical"
@@ -443,10 +451,6 @@
    "objective": {
     "es": "No hay agujeros negros por MTU; el tamaño máximo útil queda medido.",
     "en": "No MTU black holes; the maximum usable size is measured."
-   },
-   "how": {
-    "es": "GWLB encapsula en GENEVE y admite MTU de 8.500 bytes. Se mide el mayor paquete que pasa sin fragmentar.",
-    "en": "GWLB encapsulates in GENEVE and supports an 8,500-byte MTU. The largest unfragmented packet is measured."
    },
    "requires": {
     "es": "ICMP permitido hacia el servidor.",
@@ -474,6 +478,12 @@
      "id": "NET-13.1"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "GWLB encapsula en GENEVE y admite MTU de 8.500 bytes. Se mide el mayor paquete que pasa sin fragmentar.",
+     "en": "GWLB encapsulates in GENEVE and supports an 8,500-byte MTU. The largest unfragmented packet is measured."
+    }
+   },
    "priority_label": {
     "es": "Alta",
     "en": "High"
@@ -490,10 +500,6 @@
    "objective": {
     "es": "Solo pasan las 5-tuplas autorizadas; el resto se descarta y se registra.",
     "en": "Only authorized 5-tuples pass; everything else is dropped and logged."
-   },
-   "how": {
-    "es": "Política stateful con lista blanca y regla de limpieza final (Drop + Log).",
-    "en": "Stateful allow-list policy with a final cleanup rule (Drop + Log)."
    },
    "requires": {
     "es": "Lista blanca hacia el servidor y cleanup.",
@@ -573,6 +579,12 @@
      "id": "POL-01.4"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "Política stateful con lista blanca y regla de limpieza final (Drop + Log).",
+     "en": "Stateful allow-list policy with a final cleanup rule (Drop + Log)."
+    }
+   },
    "priority_label": {
     "es": "Crítica",
     "en": "Critical"
@@ -589,10 +601,6 @@
    "objective": {
     "es": "Una excepción solo abre el flujo indicado; puertos vecinos siguen bloqueados.",
     "en": "An exception opens only the given flow; neighbouring ports stay blocked."
-   },
-   "how": {
-    "es": "Regla de excepción para un único puerto (por defecto iperf3 tcp/5201) entre entornos.",
-    "en": "Exception rule for a single port (iperf3 tcp/5201 by default) between environments."
    },
    "requires": {
     "es": "Regla que permita solo el puerto de excepción configurado.",
@@ -655,6 +663,12 @@
      "id": "POL-02.3"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "Regla de excepción para un único puerto (por defecto iperf3 tcp/5201) entre entornos.",
+     "en": "Exception rule for a single port (iperf3 tcp/5201 by default) between environments."
+    }
+   },
    "priority_label": {
     "es": "Crítica",
     "en": "Critical"
@@ -671,10 +685,6 @@
    "objective": {
     "es": "La decisión se toma por el dominio, no por la IP.",
     "en": "The decision is made by domain, not by IP."
-   },
-   "how": {
-    "es": "Sitio personalizado de URL Filtering: se decide por Host (HTTP) y SNI/certificado (HTTPS). Por defecto www.example.org (bloqueado) y www.example.com (permitido) comparten IP.",
-    "en": "URL Filtering custom site: decided by Host (HTTP) and SNI/certificate (HTTPS). By default www.example.org (blocked) and www.example.com (allowed) share the same IP."
    },
    "requires": {
     "es": "Sitio personalizado con el FQDN bloqueado configurado.",
@@ -733,13 +743,19 @@
       "es": "En HTTPS se decide por SNI/certificado.",
       "en": "Over HTTPS the decision uses SNI/certificate."
      },
-     "blade": "URL Filtering / HTTPSi",
+     "blade": "URL Filtering / TLS inspection",
      "needs": [
       "internet.blocked_fqdn"
      ],
      "id": "POL-05.3"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "Sitio personalizado de URL Filtering: se decide por Host (HTTP) y SNI/certificado (HTTPS). Por defecto www.example.org (bloqueado) y www.example.com (permitido) comparten IP.",
+     "en": "URL Filtering custom site: decided by Host (HTTP) and SNI/certificate (HTTPS). By default www.example.org (blocked) and www.example.com (allowed) share the same IP."
+    }
+   },
    "priority_label": {
     "es": "Crítica",
     "en": "Critical"
@@ -756,10 +772,6 @@
    "objective": {
     "es": "Un fallo de resolución no abre conectividad.",
     "en": "A resolution failure never opens connectivity."
-   },
-   "how": {
-    "es": "Sin resolución no hay flujo y la política sigue en denegación por defecto.",
-    "en": "Without resolution there is no flow and the policy stays default-deny."
    },
    "requires": {
     "es": "Ninguno.",
@@ -785,6 +797,12 @@
      "id": "POL-07.1"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "Sin resolución no hay flujo y la política sigue en denegación por defecto.",
+     "en": "Without resolution there is no flow and the policy stays default-deny."
+    }
+   },
    "priority_label": {
     "es": "Crítica",
     "en": "Critical"
@@ -801,10 +819,6 @@
    "objective": {
     "es": "El orden de evaluación es determinista y la regla efectiva queda registrada.",
     "en": "Evaluation order is deterministic and the matching rule is logged."
-   },
-   "how": {
-    "es": "La política se evalúa de arriba abajo: una regla de excepción por encima de la de segmentación gana para su servicio; el resto lo decide la segmentación.",
-    "en": "The rulebase is evaluated top-down: an exception rule above the segmentation rule wins for its service; the rest is decided by segmentation."
    },
    "requires": {
     "es": "Roles precedence_clients y precedence_target, y la regla de excepción por encima de la de bloqueo.",
@@ -860,6 +874,12 @@
      "id": "POL-10.2"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "La política se evalúa de arriba abajo: una regla de excepción por encima de la de segmentación gana para su servicio; el resto lo decide la segmentación.",
+     "en": "The rulebase is evaluated top-down: an exception rule above the segmentation rule wins for its service; the rest is decided by segmentation."
+    }
+   },
    "priority_label": {
     "es": "Crítica",
     "en": "Critical"
@@ -876,10 +896,6 @@
    "objective": {
     "es": "No hay movimiento lateral fuera de la matriz aprobada.",
     "en": "No lateral movement outside the approved matrix."
-   },
-   "how": {
-    "es": "Se ejecuta la matriz completa desde cada entorno (en lote sobre todos los clientes).",
-    "en": "The full matrix is run from every environment (batch over all clients)."
    },
    "requires": {
     "es": "Matriz de segmentación en la configuración.",
@@ -906,6 +922,12 @@
      "id": "POL-11.1"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "Se ejecuta la matriz completa desde cada entorno (en lote sobre todos los clientes).",
+     "en": "The full matrix is run from every environment (batch over all clients)."
+    }
+   },
    "priority_label": {
     "es": "Crítica",
     "en": "Critical"
@@ -923,13 +945,9 @@
     "es": "Varios controles en el mismo flujo, cada uno con su traza.",
     "en": "Several controls on the same flow, each one traceable."
    },
-   "how": {
-    "es": "En la salida a Internet se combinan Firewall, App Control, URL Filtering, IPS, Anti-Bot y Anti-Virus; el registro indica qué blade actuó.",
-    "en": "Internet egress combines Firewall, App Control, URL Filtering, IPS, Anti-Bot and Anti-Virus; the log shows which blade acted."
-   },
    "requires": {
-    "es": "Perfil completo en la regla de salida y HTTPS Inspection.",
-    "en": "Full profile on the egress rule and HTTPS Inspection."
+    "es": "Perfil completo en la regla de salida y inspección TLS.",
+    "en": "Full profile on the egress rule and TLS inspection."
    },
    "evidence": {
     "es": "Resultados del portal (Word/CSV) y registros del firewall filtrados por IP de origen y hora.",
@@ -949,7 +967,7 @@
       "es": "Anti-Virus sobre HTTPS descifrado.",
       "en": "Anti-Virus on decrypted HTTPS."
      },
-     "blade": "Anti-Virus / HTTPSi",
+     "blade": "Anti-malware / TLS inspection",
      "id": "POL-12.1"
     },
     {
@@ -958,14 +976,14 @@
       "en": "Anti-Bot test page"
      },
      "type": "http",
-     "url": "http://sc1.checkpoint.com/za/images/threatwiki/pages/TestAntiBotBlade.html",
+     "url": "{NET:c2_test_url}",
      "args": [],
      "expect": "BLOCK",
      "explain": {
       "es": "Reputación de C&C.",
       "en": "C&C reputation."
      },
-     "blade": "Anti-Bot",
+     "blade": "Anti-bot (C&C)",
      "id": "POL-12.2"
     },
     {
@@ -1002,6 +1020,12 @@
      "id": "POL-12.4"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "En la salida a Internet se combinan Firewall, App Control, URL Filtering, IPS, Anti-Bot y Anti-Virus; el registro indica qué blade actuó.",
+     "en": "Internet egress combines Firewall, App Control, URL Filtering, IPS, Anti-Bot and Anti-Virus; the log shows which blade acted."
+    }
+   },
    "priority_label": {
     "es": "Alta",
     "en": "High"
@@ -1018,10 +1042,6 @@
    "objective": {
     "es": "El mismo estímulo solo se detecta en un destino y se bloquea en otro.",
     "en": "The same stimulus is only detected on one target and blocked on another."
-   },
-   "how": {
-    "es": "Regla de Threat Prevention con perfil Detect hacia el entorno ids_target y perfil Prevent hacia el servidor.",
-    "en": "Threat Prevention rule with a Detect profile towards the ids_target environment and a Prevent profile towards the server."
    },
    "requires": {
     "es": "Roles ids_target e ids_clients; regla TP con perfil Detect hacia ids_target; HTTP permitido desde ids_clients.",
@@ -1077,6 +1097,12 @@
      "id": "POL-15.2"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "Regla de Threat Prevention con perfil Detect hacia el entorno ids_target y perfil Prevent hacia el servidor.",
+     "en": "Threat Prevention rule with a Detect profile towards the ids_target environment and a Prevent profile towards the server."
+    }
+   },
    "priority_label": {
     "es": "Alta",
     "en": "High"
@@ -1094,13 +1120,9 @@
     "es": "Las firmas detectan y bloquean; el registro incluye protección, severidad y acción.",
     "en": "Signatures detect and block; the log includes protection, severity and action."
    },
-   "how": {
-    "es": "IPS en Prevent en todo el tráfico entre entornos y hacia Internet.",
-    "en": "IPS in Prevent for all east-west and Internet traffic."
-   },
    "requires": {
-    "es": "Perfil de Threat Prevention con IPS en Prevent en la regla este-oeste.",
-    "en": "Threat Prevention profile with IPS in Prevent on the east-west rule."
+    "es": "Perfil de prevención de amenazas con IPS en Prevent en la regla este-oeste.",
+    "en": "threat prevention profile with IPS in Prevent on the east-west rule."
    },
    "evidence": {
     "es": "Resultados del portal (Word/CSV) y registros del firewall filtrados por IP de origen y hora.",
@@ -1252,6 +1274,12 @@
      "id": "IPS-01.8"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "IPS en Prevent en todo el tráfico entre entornos y hacia Internet.",
+     "en": "IPS in Prevent for all east-west and Internet traffic."
+    }
+   },
    "priority_label": {
     "es": "Crítica",
     "en": "Critical"
@@ -1268,10 +1296,6 @@
    "objective": {
     "es": "Un escaneo solo ve los servicios autorizados.",
     "en": "A scan only sees authorized services."
-   },
-   "how": {
-    "es": "El firewall descarta los puertos no autorizados aunque el servidor escuche; los intentos quedan registrados.",
-    "en": "The firewall drops unauthorized ports even if the server listens; attempts are logged."
    },
    "requires": {
     "es": "Solo 80, 443 y el puerto de excepción permitidos hacia el servidor.",
@@ -1304,6 +1328,12 @@
      "id": "IPS-02.1"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "El firewall descarta los puertos no autorizados aunque el servidor escuche; los intentos quedan registrados.",
+     "en": "The firewall drops unauthorized ports even if the server listens; attempts are logged."
+    }
+   },
    "priority_label": {
     "es": "Alta",
     "en": "High"
@@ -1320,10 +1350,6 @@
    "objective": {
     "es": "Solo queda exceptuada la combinación autorizada; el resto sigue protegido.",
     "en": "Only the authorized combination is excepted; everything else stays protected."
-   },
-   "how": {
-    "es": "Excepción de Threat Prevention con una sola protección (TP-Link Archer AX21, CVE-2023-1389), origen ips_exception_client y destino el servidor, en Detect.",
-    "en": "Threat Prevention exception with a single protection (TP-Link Archer AX21, CVE-2023-1389), source ips_exception_client and the server as destination, in Detect."
    },
    "requires": {
     "es": "Excepción en la regla este-oeste: protección «TP-Link Archer AX21 Command Injection (CVE-2023-1389)», origen = entorno ips_exception_client, acción Detect.",
@@ -1402,6 +1428,12 @@
      "id": "IPS-04.3"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "Excepción de Threat Prevention con una sola protección (TP-Link Archer AX21, CVE-2023-1389), origen ips_exception_client y destino el servidor, en Detect.",
+     "en": "Threat Prevention exception with a single protection (TP-Link Archer AX21, CVE-2023-1389), source ips_exception_client and the server as destination, in Detect."
+    }
+   },
    "priority_label": {
     "es": "Crítica",
     "en": "Critical"
@@ -1418,10 +1450,6 @@
    "objective": {
     "es": "Tráfico legítimo parecido a firmas no se bloquea.",
     "en": "Legitimate traffic resembling signatures is not blocked."
-   },
-   "how": {
-    "es": "Perfiles por confianza e impacto; el ajuste fino se hace con excepciones por activo, sin desactivar detecciones globalmente.",
-    "en": "Profiles by confidence and impact; fine tuning uses per-asset exceptions without disabling detections globally."
    },
    "requires": {
     "es": "Ninguno.",
@@ -1518,11 +1546,17 @@
       "es": "Control: tráfico legítimo, no debe bloquearse.",
       "en": "Control: legitimate traffic, must not be blocked."
      },
-     "blade": "IPS / AV",
+     "blade": "IPS / Anti-malware",
      "skip_if_server": true,
      "id": "IPS-05.5"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "Perfiles por confianza e impacto; el ajuste fino se hace con excepciones por activo, sin desactivar detecciones globalmente.",
+     "en": "Profiles by confidence and impact; fine tuning uses per-asset exceptions without disabling detections globally."
+    }
+   },
    "priority_label": {
     "es": "Alta",
     "en": "High"
@@ -1539,10 +1573,6 @@
    "objective": {
     "es": "Se bloquean patrones de explotación sin tocar el servidor.",
     "en": "Exploitation patterns are blocked without touching the server."
-   },
-   "how": {
-    "es": "El IPS bloquea la explotación de CVE conocidas; el servidor de pruebas no es vulnerable, solo recibe el patrón.",
-    "en": "IPS blocks exploitation of known CVEs; the test server is not vulnerable, it only receives the pattern."
    },
    "requires": {
     "es": "IPS en Prevent.",
@@ -1697,6 +1727,12 @@
      "id": "IPS-06.7"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "El IPS bloquea la explotación de CVE conocidas; el servidor de pruebas no es vulnerable, solo recibe el patrón.",
+     "en": "IPS blocks exploitation of known CVEs; the test server is not vulnerable, it only receives the pattern."
+    }
+   },
    "priority_label": {
     "es": "Alta",
     "en": "High"
@@ -1713,10 +1749,6 @@
    "objective": {
     "es": "Las variantes ofuscadas y troceadas se detectan igual que el ataque original.",
     "en": "Obfuscated and segmented variants are detected like the original attack."
-   },
-   "how": {
-    "es": "El IPS reensambla el flujo TCP y normaliza la codificación antes de buscar patrones.",
-    "en": "IPS reassembles the TCP stream and normalizes encoding before pattern matching."
    },
    "requires": {
     "es": "IPS en Prevent.",
@@ -1877,6 +1909,12 @@
      "id": "IPS-07.8"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "El IPS reensambla el flujo TCP y normaliza la codificación antes de buscar patrones.",
+     "en": "IPS reassembles the TCP stream and normalizes encoding before pattern matching."
+    }
+   },
    "priority_label": {
     "es": "Alta",
     "en": "High"
@@ -1893,10 +1931,6 @@
    "objective": {
     "es": "Los destinos de países bloqueados se descartan.",
     "en": "Destinations in blocked countries are dropped."
-   },
-   "how": {
-    "es": "Objetos actualizables GEO en la capa de salida.",
-    "en": "GEO updatable objects in the egress layer."
    },
    "requires": {
     "es": "Regla de salida con los países bloqueados y una URL de prueba de uno de ellos (config.internet.geo_blocked_url).",
@@ -1943,6 +1977,12 @@
      "id": "IPS-08.2"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "Objetos actualizables GEO en la capa de salida.",
+     "en": "GEO updatable objects in the egress layer."
+    }
+   },
    "priority_label": {
     "es": "Alta",
     "en": "High"
@@ -1960,10 +2000,6 @@
     "es": "El tráfico hacia indicadores de C&C se bloquea.",
     "en": "Traffic to C&C indicators is blocked."
    },
-   "how": {
-    "es": "Anti-Bot bloquea por reputación de dominio, IP y URL (ThreatCloud) y por patrones de comunicación.",
-    "en": "Anti-Bot blocks by domain, IP and URL reputation (ThreatCloud) and by communication patterns."
-   },
    "requires": {
     "es": "Anti-Bot en el perfil de salida.",
     "en": "Anti-Bot in the egress profile."
@@ -1975,37 +2011,43 @@
    "checks": [
     {
      "name": {
-      "es": "Página de prueba de Anti-Bot de Check Point",
-      "en": "Check Point Anti-Bot test page"
+      "es": "URL de prueba de C&C del fabricante",
+      "en": "Vendor C&C test URL"
      },
      "type": "http",
-     "url": "http://sc1.checkpoint.com/za/images/threatwiki/pages/TestAntiBotBlade.html",
+     "url": "{NET:c2_test_url}",
      "args": [],
      "expect": "BLOCK",
      "explain": {
-      "es": "URL de prueba clasificada como C&C.",
-      "en": "Test URL classified as C&C."
+      "es": "URL de prueba que el fabricante clasifica como C&C (configurable en Destinos en Internet).",
+      "en": "Test URL the vendor classifies as C&C (configurable in Internet targets)."
      },
-     "blade": "Anti-Bot",
+     "blade": "Anti-bot (C&C)",
      "id": "IPS-09.1"
     },
     {
      "name": {
-      "es": "Control: www.checkpoint.com",
-      "en": "Control: www.checkpoint.com"
+      "es": "Control: sitio corporativo permitido",
+      "en": "Control: allowed business site"
      },
      "type": "http",
-     "url": "http://www.checkpoint.com/",
+     "url": "http://{NET:allowed_business_site}/",
      "args": [],
      "expect": "ALLOW",
      "explain": {
       "es": "Control: tráfico legítimo, no debe bloquearse.",
       "en": "Control: legitimate traffic, must not be blocked."
      },
-     "blade": "Anti-Bot",
+     "blade": "Anti-bot (C&C)",
      "id": "IPS-09.2"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "Anti-Bot bloquea por reputación de dominio, IP y URL (ThreatCloud) y por patrones de comunicación.",
+     "en": "Anti-Bot blocks by domain, IP and URL reputation (ThreatCloud) and by communication patterns."
+    }
+   },
    "priority_label": {
     "es": "Alta",
     "en": "High"
@@ -2022,10 +2064,6 @@
    "objective": {
     "es": "El modo detección no bloquea; el de prevención sí; ambos registran.",
     "en": "Detect mode does not block; prevent mode does; both log."
-   },
-   "how": {
-    "es": "Mismo estímulo contra el destino en Detect (ids_target) y contra el servidor en Prevent.",
-    "en": "Same stimulus against the Detect target (ids_target) and the Prevent server."
    },
    "requires": {
     "es": "Igual que POL-15.",
@@ -2131,6 +2169,12 @@
      "id": "IPS-11.4"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "Mismo estímulo contra el destino en Detect (ids_target) y contra el servidor en Prevent.",
+     "en": "Same stimulus against the Detect target (ids_target) and the Prevent server."
+    }
+   },
    "priority_label": {
     "es": "Alta",
     "en": "High"
@@ -2147,10 +2191,6 @@
    "objective": {
     "es": "El fichero de prueba EICAR se detecta y bloquea.",
     "en": "The EICAR test file is detected and blocked."
-   },
-   "how": {
-    "es": "Anti-Virus (firmas + ThreatCloud) en HTTP/HTTPS, incluidos comprimidos anidados y subidas.",
-    "en": "Anti-Virus (signatures + ThreatCloud) over HTTP/HTTPS including nested archives and uploads."
    },
    "requires": {
     "es": "Anti-Virus con inspección en ambos sentidos y de archivos comprimidos.",
@@ -2174,7 +2214,7 @@
       "es": "Descarga desde el servidor; Anti-Virus inspecciona ficheros en ambos sentidos y dentro de comprimidos.",
       "en": "Download from the server; Anti-Virus inspects files in both directions and inside archives."
      },
-     "blade": "Anti-Virus",
+     "blade": "Anti-malware",
      "skip_if_server": true,
      "id": "THR-01.1"
     },
@@ -2191,7 +2231,7 @@
       "es": "Descarga desde el servidor; Anti-Virus inspecciona ficheros en ambos sentidos y dentro de comprimidos.",
       "en": "Download from the server; Anti-Virus inspects files in both directions and inside archives."
      },
-     "blade": "Anti-Virus",
+     "blade": "Anti-malware",
      "skip_if_server": true,
      "id": "THR-01.2"
     },
@@ -2208,7 +2248,7 @@
       "es": "Descarga desde el servidor; Anti-Virus inspecciona ficheros en ambos sentidos y dentro de comprimidos.",
       "en": "Download from the server; Anti-Virus inspects files in both directions and inside archives."
      },
-     "blade": "Anti-Virus",
+     "blade": "Anti-malware",
      "skip_if_server": true,
      "id": "THR-01.3"
     },
@@ -2225,7 +2265,7 @@
       "es": "Descarga desde el servidor; Anti-Virus inspecciona ficheros en ambos sentidos y dentro de comprimidos.",
       "en": "Download from the server; Anti-Virus inspects files in both directions and inside archives."
      },
-     "blade": "Anti-Virus",
+     "blade": "Anti-malware",
      "skip_if_server": true,
      "id": "THR-01.4"
     },
@@ -2247,7 +2287,7 @@
       "es": "Subida tipo API: el fichero va en el cuerpo de la petición.",
       "en": "API-style upload: the file travels in the request body."
      },
-     "blade": "IPS / Anti-Virus",
+     "blade": "IPS / Anti-malware",
      "skip_if_server": true,
      "id": "THR-01.5"
     },
@@ -2264,11 +2304,17 @@
       "es": "Control: tráfico legítimo, no debe bloquearse.",
       "en": "Control: legitimate traffic, must not be blocked."
      },
-     "blade": "Anti-Virus",
+     "blade": "Anti-malware",
      "skip_if_server": true,
      "id": "THR-01.6"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "Anti-Virus (firmas + ThreatCloud) en HTTP/HTTPS, incluidos comprimidos anidados y subidas.",
+     "en": "Anti-Virus (signatures + ThreatCloud) over HTTP/HTTPS including nested archives and uploads."
+    }
+   },
    "priority_label": {
     "es": "Alta",
     "en": "High"
@@ -2286,13 +2332,9 @@
     "es": "Se cuantifica lo que aporta la inspección TLS.",
     "en": "Quantifies what TLS inspection adds."
    },
-   "how": {
-    "es": "Mismo EICAR por HTTPS al mismo servidor con dos nombres: inspect.testkit.lab (descifrado) y nodecrypt.testkit.lab (excluido).",
-    "en": "Same EICAR over HTTPS to the same server with two names: inspect.testkit.lab (decrypted) and nodecrypt.testkit.lab (bypassed)."
-   },
    "requires": {
-    "es": "HTTPS Inspection con bypass para nodecrypt.testkit.lab y mtls.testkit.lab.",
-    "en": "HTTPS Inspection with bypass for nodecrypt.testkit.lab and mtls.testkit.lab."
+    "es": "inspección TLS con bypass para nodecrypt.testkit.lab y mtls.testkit.lab.",
+    "en": "TLS inspection with bypass for nodecrypt.testkit.lab and mtls.testkit.lab."
    },
    "evidence": {
     "es": "Resultados del portal (Word/CSV) y registros del firewall filtrados por IP de origen y hora.",
@@ -2312,7 +2354,7 @@
       "es": "Descarga desde el servidor; Anti-Virus inspecciona ficheros en ambos sentidos y dentro de comprimidos.",
       "en": "Download from the server; Anti-Virus inspects files in both directions and inside archives."
      },
-     "blade": "Anti-Virus",
+     "blade": "Anti-malware",
      "skip_if_server": true,
      "id": "THR-02.1"
     },
@@ -2329,10 +2371,10 @@
      ],
      "expect": "BLOCK",
      "explain": {
-      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: HTTPS Inspection descifra y los blades inspeccionan el contenido.",
-      "en": "HTTPS request to the server with SNI inspect.testkit.lab: HTTPS Inspection decrypts and the blades inspect the content."
+      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: inspección TLS descifra y los blades inspeccionan el contenido.",
+      "en": "HTTPS request to the server with SNI inspect.testkit.lab: TLS inspection decrypts and the blades inspect the content."
      },
-     "blade": "Anti-Virus / HTTPSi",
+     "blade": "Anti-malware / TLS inspection",
      "skip_if_server": true,
      "id": "THR-02.2"
     },
@@ -2352,7 +2394,7 @@
       "es": "Sin descifrado no hay visibilidad del contenido (resultado esperado).",
       "en": "Without decryption there is no content visibility (expected result)."
      },
-     "blade": "HTTPSi (bypass)",
+     "blade": "TLS inspection (bypass)",
      "skip_if_server": true,
      "id": "THR-02.3"
     },
@@ -2366,13 +2408,19 @@
      "args": [],
      "expect": "BLOCK",
      "explain": {
-      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: HTTPS Inspection descifra y los blades inspeccionan el contenido.",
-      "en": "HTTPS request to the server with SNI inspect.testkit.lab: HTTPS Inspection decrypts and the blades inspect the content."
+      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: inspección TLS descifra y los blades inspeccionan el contenido.",
+      "en": "HTTPS request to the server with SNI inspect.testkit.lab: TLS inspection decrypts and the blades inspect the content."
      },
-     "blade": "Anti-Virus / HTTPSi",
+     "blade": "Anti-malware / TLS inspection",
      "id": "THR-02.4"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "Mismo EICAR por HTTPS al mismo servidor con dos nombres: inspect.testkit.lab (descifrado) y nodecrypt.testkit.lab (excluido).",
+     "en": "Same EICAR over HTTPS to the same server with two names: inspect.testkit.lab (decrypted) and nodecrypt.testkit.lab (bypassed)."
+    }
+   },
    "priority_label": {
     "es": "Alta",
     "en": "High"
@@ -2389,10 +2437,6 @@
    "objective": {
     "es": "Ficheros limpios de varios formatos y tamaños no se bloquean.",
     "en": "Clean files of several formats and sizes are not blocked."
-   },
-   "how": {
-    "es": "Descargas por HTTP y HTTPS.",
-    "en": "Downloads over HTTP and HTTPS."
    },
    "requires": {
     "es": "Ninguno.",
@@ -2416,7 +2460,7 @@
       "es": "Control: tráfico legítimo, no debe bloquearse.",
       "en": "Control: legitimate traffic, must not be blocked."
      },
-     "blade": "Anti-Virus",
+     "blade": "Anti-malware",
      "skip_if_server": true,
      "id": "THR-03.1"
     },
@@ -2436,7 +2480,7 @@
       "es": "Control: tráfico legítimo, no debe bloquearse.",
       "en": "Control: legitimate traffic, must not be blocked."
      },
-     "blade": "Anti-Virus",
+     "blade": "Anti-malware",
      "skip_if_server": true,
      "id": "THR-03.2"
     },
@@ -2453,7 +2497,7 @@
       "es": "Control: tráfico legítimo, no debe bloquearse.",
       "en": "Control: legitimate traffic, must not be blocked."
      },
-     "blade": "Anti-Virus",
+     "blade": "Anti-malware",
      "skip_if_server": true,
      "id": "THR-03.3"
     },
@@ -2473,7 +2517,7 @@
       "es": "Control: tráfico legítimo, no debe bloquearse.",
       "en": "Control: legitimate traffic, must not be blocked."
      },
-     "blade": "Anti-Virus",
+     "blade": "Anti-malware",
      "skip_if_server": true,
      "id": "THR-03.4"
     },
@@ -2490,7 +2534,7 @@
       "es": "Control: tráfico legítimo, no debe bloquearse.",
       "en": "Control: legitimate traffic, must not be blocked."
      },
-     "blade": "Anti-Virus",
+     "blade": "Anti-malware",
      "skip_if_server": true,
      "id": "THR-03.5"
     },
@@ -2510,7 +2554,7 @@
       "es": "Control: tráfico legítimo, no debe bloquearse.",
       "en": "Control: legitimate traffic, must not be blocked."
      },
-     "blade": "Anti-Virus",
+     "blade": "Anti-malware",
      "skip_if_server": true,
      "id": "THR-03.6"
     },
@@ -2527,7 +2571,7 @@
       "es": "Control: tráfico legítimo, no debe bloquearse.",
       "en": "Control: legitimate traffic, must not be blocked."
      },
-     "blade": "Anti-Virus",
+     "blade": "Anti-malware",
      "skip_if_server": true,
      "id": "THR-03.7"
     },
@@ -2547,7 +2591,7 @@
       "es": "Control: tráfico legítimo, no debe bloquearse.",
       "en": "Control: legitimate traffic, must not be blocked."
      },
-     "blade": "Anti-Virus",
+     "blade": "Anti-malware",
      "skip_if_server": true,
      "id": "THR-03.8"
     },
@@ -2564,7 +2608,7 @@
       "es": "Control: tráfico legítimo, no debe bloquearse.",
       "en": "Control: legitimate traffic, must not be blocked."
      },
-     "blade": "Anti-Virus",
+     "blade": "Anti-malware",
      "skip_if_server": true,
      "id": "THR-03.9"
     },
@@ -2584,7 +2628,7 @@
       "es": "Control: tráfico legítimo, no debe bloquearse.",
       "en": "Control: legitimate traffic, must not be blocked."
      },
-     "blade": "Anti-Virus",
+     "blade": "Anti-malware",
      "skip_if_server": true,
      "id": "THR-03.10"
     },
@@ -2601,7 +2645,7 @@
       "es": "Control: tráfico legítimo, no debe bloquearse.",
       "en": "Control: legitimate traffic, must not be blocked."
      },
-     "blade": "Anti-Virus",
+     "blade": "Anti-malware",
      "skip_if_server": true,
      "id": "THR-03.11"
     },
@@ -2621,7 +2665,7 @@
       "es": "Control: tráfico legítimo, no debe bloquearse.",
       "en": "Control: legitimate traffic, must not be blocked."
      },
-     "blade": "Anti-Virus",
+     "blade": "Anti-malware",
      "skip_if_server": true,
      "id": "THR-03.12"
     },
@@ -2638,7 +2682,7 @@
       "es": "Control: tráfico legítimo, no debe bloquearse.",
       "en": "Control: legitimate traffic, must not be blocked."
      },
-     "blade": "Anti-Virus",
+     "blade": "Anti-malware",
      "skip_if_server": true,
      "id": "THR-03.13"
     },
@@ -2658,11 +2702,17 @@
       "es": "Control: tráfico legítimo, no debe bloquearse.",
       "en": "Control: legitimate traffic, must not be blocked."
      },
-     "blade": "Anti-Virus",
+     "blade": "Anti-malware",
      "skip_if_server": true,
      "id": "THR-03.14"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "Descargas por HTTP y HTTPS.",
+     "en": "Downloads over HTTP and HTTPS."
+    }
+   },
    "priority_label": {
     "es": "Alta",
     "en": "High"
@@ -2680,13 +2730,9 @@
     "es": "Los controles combinados no se anulan y muestran quién actuó.",
     "en": "Combined controls do not cancel each other and show who acted."
    },
-   "how": {
-    "es": "Varios blades en el mismo perfil.",
-    "en": "Several blades in the same profile."
-   },
    "requires": {
-    "es": "Perfil completo y HTTPS Inspection.",
-    "en": "Full profile and HTTPS Inspection."
+    "es": "Perfil completo y inspección TLS.",
+    "en": "Full profile and TLS inspection."
    },
    "evidence": {
     "es": "Resultados del portal (Word/CSV) y registros del firewall filtrados por IP de origen y hora.",
@@ -2706,10 +2752,10 @@
      ],
      "expect": "BLOCK",
      "explain": {
-      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: HTTPS Inspection descifra y los blades inspeccionan el contenido.",
-      "en": "HTTPS request to the server with SNI inspect.testkit.lab: HTTPS Inspection decrypts and the blades inspect the content."
+      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: inspección TLS descifra y los blades inspeccionan el contenido.",
+      "en": "HTTPS request to the server with SNI inspect.testkit.lab: TLS inspection decrypts and the blades inspect the content."
      },
-     "blade": "Anti-Virus / HTTPSi",
+     "blade": "Anti-malware / TLS inspection",
      "skip_if_server": true,
      "id": "THR-05.1"
     },
@@ -2726,10 +2772,10 @@
      ],
      "expect": "BLOCK",
      "explain": {
-      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: HTTPS Inspection descifra y los blades inspeccionan el contenido.",
-      "en": "HTTPS request to the server with SNI inspect.testkit.lab: HTTPS Inspection decrypts and the blades inspect the content."
+      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: inspección TLS descifra y los blades inspeccionan el contenido.",
+      "en": "HTTPS request to the server with SNI inspect.testkit.lab: TLS inspection decrypts and the blades inspect the content."
      },
-     "blade": "IPS / HTTPSi",
+     "blade": "IPS / TLS inspection",
      "skip_if_server": true,
      "id": "THR-05.2"
     },
@@ -2739,17 +2785,23 @@
       "en": "C&C over HTTP"
      },
      "type": "http",
-     "url": "http://sc1.checkpoint.com/za/images/threatwiki/pages/TestAntiBotBlade.html",
+     "url": "{NET:c2_test_url}",
      "args": [],
      "expect": "BLOCK",
      "explain": {
       "es": "Anti-Bot.",
       "en": "Anti-Bot."
      },
-     "blade": "Anti-Bot",
+     "blade": "Anti-bot (C&C)",
      "id": "THR-05.3"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "Varios blades en el mismo perfil.",
+     "en": "Several blades in the same profile."
+    }
+   },
    "priority_label": {
     "es": "Alta",
     "en": "High"
@@ -2767,13 +2819,9 @@
     "es": "Se documenta qué versiones se inspeccionan y se bloquean patrones dentro de ellas.",
     "en": "Documents which versions are inspected and blocks patterns inside them."
    },
-   "how": {
-    "es": "HTTPS Inspection inspecciona TLS 1.2 y 1.3 re-firmando con la CA de inspección.",
-    "en": "HTTPS Inspection inspects TLS 1.2 and 1.3 re-signing with the inspection CA."
-   },
    "requires": {
-    "es": "HTTPS Inspection (outbound) con la CA de inspección distribuida a los clientes y la CA del kit como CA de confianza.",
-    "en": "Outbound HTTPS Inspection with the inspection CA trusted by clients and the testkit CA as a trusted CA."
+    "es": "inspección TLS (outbound) con la CA de inspección distribuida a los clientes y la CA del kit como CA de confianza.",
+    "en": "Outbound TLS inspection with the inspection CA trusted by clients and the testkit CA as a trusted CA."
    },
    "evidence": {
     "es": "Resultados del portal (Word/CSV) y registros del firewall filtrados por IP de origen y hora.",
@@ -2791,7 +2839,7 @@
       "es": "El certificado recibido lo emite la CA de inspección.",
       "en": "The received certificate is issued by the inspection CA."
      },
-     "blade": "HTTPSi",
+     "blade": "TLS inspection",
      "host": "{SERVER}",
      "sni": "inspect.testkit.lab",
      "tls": "1.2",
@@ -2809,7 +2857,7 @@
       "es": "Igual con TLS 1.3.",
       "en": "Same with TLS 1.3."
      },
-     "blade": "HTTPSi",
+     "blade": "TLS inspection",
      "host": "{SERVER}",
      "sni": "inspect.testkit.lab",
      "tls": "1.3",
@@ -2832,10 +2880,10 @@
      ],
      "expect": "BLOCK",
      "explain": {
-      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: HTTPS Inspection descifra y los blades inspeccionan el contenido.",
-      "en": "HTTPS request to the server with SNI inspect.testkit.lab: HTTPS Inspection decrypts and the blades inspect the content."
+      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: inspección TLS descifra y los blades inspeccionan el contenido.",
+      "en": "HTTPS request to the server with SNI inspect.testkit.lab: TLS inspection decrypts and the blades inspect the content."
      },
-     "blade": "IPS / HTTPSi",
+     "blade": "IPS / TLS inspection",
      "skip_if_server": true,
      "id": "TLS-01.3"
     },
@@ -2853,10 +2901,10 @@
      ],
      "expect": "BLOCK",
      "explain": {
-      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: HTTPS Inspection descifra y los blades inspeccionan el contenido.",
-      "en": "HTTPS request to the server with SNI inspect.testkit.lab: HTTPS Inspection decrypts and the blades inspect the content."
+      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: inspección TLS descifra y los blades inspeccionan el contenido.",
+      "en": "HTTPS request to the server with SNI inspect.testkit.lab: TLS inspection decrypts and the blades inspect the content."
      },
-     "blade": "IPS / HTTPSi",
+     "blade": "IPS / TLS inspection",
      "skip_if_server": true,
      "id": "TLS-01.4"
     },
@@ -2877,11 +2925,17 @@
       "es": "Control: tráfico legítimo, no debe bloquearse.",
       "en": "Control: legitimate traffic, must not be blocked."
      },
-     "blade": "HTTPSi",
+     "blade": "TLS inspection",
      "skip_if_server": true,
      "id": "TLS-01.5"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "HTTPS Inspection inspecciona TLS 1.2 y 1.3 re-firmando con la CA de inspección.",
+     "en": "HTTPS Inspection inspects TLS 1.2 and 1.3 re-signing with the inspection CA."
+    }
+   },
    "priority_label": {
     "es": "Crítica",
     "en": "Critical"
@@ -2899,13 +2953,9 @@
     "es": "Solo los clientes que confían en la CA funcionan; no hay bypass encubierto.",
     "en": "Only clients trusting the CA work; there is no hidden bypass."
    },
-   "how": {
-    "es": "La CA de inspección se distribuye a los clientes; un cliente sin ella recibe un error de certificado.",
-    "en": "The inspection CA is distributed to clients; a client without it gets a certificate error."
-   },
    "requires": {
-    "es": "HTTPS Inspection (outbound) con la CA de inspección distribuida a los clientes y la CA del kit como CA de confianza.",
-    "en": "Outbound HTTPS Inspection with the inspection CA trusted by clients and the testkit CA as a trusted CA."
+    "es": "inspección TLS (outbound) con la CA de inspección distribuida a los clientes y la CA del kit como CA de confianza.",
+    "en": "Outbound TLS inspection with the inspection CA trusted by clients and the testkit CA as a trusted CA."
    },
    "evidence": {
     "es": "Resultados del portal (Word/CSV) y registros del firewall filtrados por IP de origen y hora.",
@@ -2923,7 +2973,7 @@
       "es": "La web llega firmada por la CA de inspección.",
       "en": "The site arrives signed by the inspection CA."
      },
-     "blade": "HTTPSi",
+     "blade": "TLS inspection",
      "host": "{NET:inspected_site}",
      "sni": "{NET:inspected_site}",
      "id": "TLS-02.1"
@@ -2936,10 +2986,10 @@
      "type": "tls_verify",
      "expect": "VALID",
      "explain": {
-      "es": "Valida con la CA de Check Point en su almacén.",
-      "en": "Validates with the Check Point CA in its store."
+      "es": "Valida con la CA de inspección en su almacén.",
+      "en": "Validates with the inspection CA in its store."
      },
-     "blade": "HTTPSi",
+     "blade": "TLS inspection",
      "url": "https://{NET:inspected_site}/",
      "bundle": "system",
      "id": "TLS-02.2"
@@ -2955,12 +3005,18 @@
       "es": "Solo CA públicas: falla.",
       "en": "Public CAs only: fails."
      },
-     "blade": "HTTPSi",
+     "blade": "TLS inspection",
      "url": "https://{NET:inspected_site}/",
      "bundle": "public",
      "id": "TLS-02.3"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "La CA de inspección se distribuye a los clientes; un cliente sin ella recibe un error de certificado.",
+     "en": "The inspection CA is distributed to clients; a client without it gets a certificate error."
+    }
+   },
    "priority_label": {
     "es": "Alta",
     "en": "High"
@@ -2977,10 +3033,6 @@
    "objective": {
     "es": "La respuesta coincide con la política de validación y queda registrada.",
     "en": "The response matches the validation policy and is logged."
-   },
-   "how": {
-    "es": "HTTPS Inspection valida el certificado original y bloquea los no confiables, caducados y revocados.",
-    "en": "HTTPS Inspection validates the original certificate and blocks untrusted, expired and revoked ones."
    },
    "requires": {
     "es": "HTTPS advanced settings: bloquear no confiables, caducados y revocados.",
@@ -3004,7 +3056,7 @@
       "es": "Validación del certificado del servidor.",
       "en": "Server certificate validation."
      },
-     "blade": "HTTPSi",
+     "blade": "TLS inspection",
      "id": "TLS-03.1"
     },
     {
@@ -3020,7 +3072,7 @@
       "es": "CA no confiable.",
       "en": "Untrusted CA."
      },
-     "blade": "HTTPSi",
+     "blade": "TLS inspection",
      "id": "TLS-03.2"
     },
     {
@@ -3036,7 +3088,7 @@
       "es": "Cadena hasta una raíz desconocida.",
       "en": "Chain to an unknown root."
      },
-     "blade": "HTTPSi",
+     "blade": "TLS inspection",
      "id": "TLS-03.3"
     },
     {
@@ -3052,7 +3104,7 @@
       "es": "Revocado.",
       "en": "Revoked."
      },
-     "blade": "HTTPSi",
+     "blade": "TLS inspection",
      "id": "TLS-03.4"
     },
     {
@@ -3068,10 +3120,16 @@
       "es": "Control: tráfico legítimo, no debe bloquearse.",
       "en": "Control: legitimate traffic, must not be blocked."
      },
-     "blade": "HTTPSi",
+     "blade": "TLS inspection",
      "id": "TLS-03.5"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "HTTPS Inspection valida el certificado original y bloquea los no confiables, caducados y revocados.",
+     "en": "HTTPS Inspection validates the original certificate and blocks untrusted, expired and revoked ones."
+    }
+   },
    "priority_label": {
     "es": "Alta",
     "en": "High"
@@ -3089,13 +3147,9 @@
     "es": "Las incompatibilidades se resuelven con una exclusión mínima.",
     "en": "Incompatibilities are solved with a minimal bypass."
    },
-   "how": {
-    "es": "mTLS y pinning no admiten intermediario: se excluyen del descifrado solo esos FQDN.",
-    "en": "mTLS and pinning do not accept a man-in-the-middle: only those FQDNs are bypassed."
-   },
    "requires": {
-    "es": "HTTPS Inspection (outbound) con la CA de inspección distribuida a los clientes y la CA del kit como CA de confianza.",
-    "en": "Outbound HTTPS Inspection with the inspection CA trusted by clients and the testkit CA as a trusted CA."
+    "es": "inspección TLS (outbound) con la CA de inspección distribuida a los clientes y la CA del kit como CA de confianza.",
+    "en": "Outbound TLS inspection with the inspection CA trusted by clients and the testkit CA as a trusted CA."
    },
    "evidence": {
     "es": "Resultados del portal (Word/CSV) y registros del firewall filtrados por IP de origen y hora.",
@@ -3122,7 +3176,7 @@
       "es": "El servidor exige certificado de cliente.",
       "en": "The server requires a client certificate."
      },
-     "blade": "HTTPSi (bypass)",
+     "blade": "TLS inspection (bypass)",
      "skip_if_server": true,
      "id": "TLS-04.1"
     },
@@ -3137,7 +3191,7 @@
       "es": "Cliente que solo confía en la CA del servicio.",
       "en": "Client trusting only the service CA."
      },
-     "blade": "HTTPSi (bypass)",
+     "blade": "TLS inspection (bypass)",
      "url": "https://nodecrypt.testkit.lab/",
      "args": [
       "--resolve",
@@ -3158,7 +3212,7 @@
       "es": "Contra el FQDN inspeccionado falla: el pinning requiere exclusión.",
       "en": "Against the inspected FQDN it fails: pinning needs a bypass."
      },
-     "blade": "HTTPSi",
+     "blade": "TLS inspection",
      "url": "https://inspect.testkit.lab/",
      "args": [
       "--resolve",
@@ -3169,6 +3223,12 @@
      "id": "TLS-04.3"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "mTLS y pinning no admiten intermediario: se excluyen del descifrado solo esos FQDN.",
+     "en": "mTLS and pinning do not accept a man-in-the-middle: only those FQDNs are bypassed."
+    }
+   },
    "priority_label": {
     "es": "Alta",
     "en": "High"
@@ -3186,13 +3246,9 @@
     "es": "Solo el alcance aprobado queda sin descifrar.",
     "en": "Only the approved scope is not decrypted."
    },
-   "how": {
-    "es": "Exclusiones por FQDN, por categorías sensibles (finanzas, salud, gobierno) y por la lista recomendada de Check Point.",
-    "en": "Bypass by FQDN, sensitive categories (finance, health, government) and the Check Point recommended list."
-   },
    "requires": {
-    "es": "HTTPS Inspection (outbound) con la CA de inspección distribuida a los clientes y la CA del kit como CA de confianza.",
-    "en": "Outbound HTTPS Inspection with the inspection CA trusted by clients and the testkit CA as a trusted CA."
+    "es": "inspección TLS (outbound) con la CA de inspección distribuida a los clientes y la CA del kit como CA de confianza.",
+    "en": "Outbound TLS inspection with the inspection CA trusted by clients and the testkit CA as a trusted CA."
    },
    "evidence": {
     "es": "Resultados del portal (Word/CSV) y registros del firewall filtrados por IP de origen y hora.",
@@ -3210,7 +3266,7 @@
       "es": "No se descifra.",
       "en": "Not decrypted."
      },
-     "blade": "HTTPSi",
+     "blade": "TLS inspection",
      "host": "{SERVER}",
      "sni": "nodecrypt.testkit.lab",
      "skip_if_server": true,
@@ -3227,7 +3283,7 @@
       "es": "Se descifra.",
       "en": "Decrypted."
      },
-     "blade": "HTTPSi",
+     "blade": "TLS inspection",
      "host": "{SERVER}",
      "sni": "inspect.testkit.lab",
      "skip_if_server": true,
@@ -3244,7 +3300,7 @@
       "es": "Categoría sensible excluida.",
       "en": "Sensitive category bypassed."
      },
-     "blade": "HTTPSi",
+     "blade": "TLS inspection",
      "host": "{NET:financial_site}",
      "sni": "{NET:financial_site}",
      "id": "TLS-05.3"
@@ -3260,12 +3316,18 @@
       "es": "Se descifra.",
       "en": "Decrypted."
      },
-     "blade": "HTTPSi",
+     "blade": "TLS inspection",
      "host": "{NET:inspected_site}",
      "sni": "{NET:inspected_site}",
      "id": "TLS-05.4"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "Exclusiones por FQDN, por categorías sensibles (finanzas, salud, gobierno) y por la lista recomendada de Check Point.",
+     "en": "Bypass by FQDN, sensitive categories (finance, health, government) and the Check Point recommended list."
+    }
+   },
    "priority_label": {
     "es": "Crítica",
     "en": "Critical"
@@ -3283,13 +3345,9 @@
     "es": "Se conoce la visibilidad efectiva y no hay bypass silencioso.",
     "en": "Effective visibility is known and there is no silent bypass."
    },
-   "how": {
-    "es": "HTTP/2 se inspecciona igual que HTTP/1.1; QUIC (UDP/443) se deniega para forzar TCP inspeccionado.",
-    "en": "HTTP/2 is inspected like HTTP/1.1; QUIC (UDP/443) is denied to force inspected TCP."
-   },
    "requires": {
-    "es": "HTTPS Inspection (outbound) con la CA de inspección distribuida a los clientes y la CA del kit como CA de confianza.",
-    "en": "Outbound HTTPS Inspection with the inspection CA trusted by clients and the testkit CA as a trusted CA."
+    "es": "inspección TLS (outbound) con la CA de inspección distribuida a los clientes y la CA del kit como CA de confianza.",
+    "en": "Outbound TLS inspection with the inspection CA trusted by clients and the testkit CA as a trusted CA."
    },
    "evidence": {
     "es": "Resultados del portal (Word/CSV) y registros del firewall filtrados por IP de origen y hora.",
@@ -3310,10 +3368,10 @@
      ],
      "expect": "BLOCK",
      "explain": {
-      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: HTTPS Inspection descifra y los blades inspeccionan el contenido.",
-      "en": "HTTPS request to the server with SNI inspect.testkit.lab: HTTPS Inspection decrypts and the blades inspect the content."
+      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: inspección TLS descifra y los blades inspeccionan el contenido.",
+      "en": "HTTPS request to the server with SNI inspect.testkit.lab: TLS inspection decrypts and the blades inspect the content."
      },
-     "blade": "IPS / HTTPSi",
+     "blade": "IPS / TLS inspection",
      "skip_if_server": true,
      "id": "TLS-06.1"
     },
@@ -3331,10 +3389,10 @@
      ],
      "expect": "BLOCK",
      "explain": {
-      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: HTTPS Inspection descifra y los blades inspeccionan el contenido.",
-      "en": "HTTPS request to the server with SNI inspect.testkit.lab: HTTPS Inspection decrypts and the blades inspect the content."
+      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: inspección TLS descifra y los blades inspeccionan el contenido.",
+      "en": "HTTPS request to the server with SNI inspect.testkit.lab: TLS inspection decrypts and the blades inspect the content."
      },
-     "blade": "Anti-Virus / HTTPSi",
+     "blade": "Anti-malware / TLS inspection",
      "skip_if_server": true,
      "id": "TLS-06.2"
     },
@@ -3355,7 +3413,7 @@
       "es": "Control: tráfico legítimo, no debe bloquearse.",
       "en": "Control: legitimate traffic, must not be blocked."
      },
-     "blade": "HTTPSi",
+     "blade": "TLS inspection",
      "skip_if_server": true,
      "id": "TLS-06.3"
     },
@@ -3375,6 +3433,12 @@
      "id": "TLS-06.4"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "HTTP/2 se inspecciona igual que HTTP/1.1; QUIC (UDP/443) se deniega para forzar TCP inspeccionado.",
+     "en": "HTTP/2 is inspected like HTTP/1.1; QUIC (UDP/443) is denied to force inspected TCP."
+    }
+   },
    "priority_label": {
     "es": "Alta",
     "en": "High"
@@ -3392,13 +3456,9 @@
     "es": "Se conoce el impacto sobre la IP de origen.",
     "en": "The impact on the source IP is known."
    },
-   "how": {
-    "es": "Detrás de GWLB el firewall es transparente: conserva la IP original y no añade cabeceras de proxy.",
-    "en": "Behind GWLB the firewall is transparent: it keeps the original IP and adds no proxy headers."
-   },
    "requires": {
-    "es": "HTTPS Inspection (outbound) con la CA de inspección distribuida a los clientes y la CA del kit como CA de confianza.",
-    "en": "Outbound HTTPS Inspection with the inspection CA trusted by clients and the testkit CA as a trusted CA."
+    "es": "inspección TLS (outbound) con la CA de inspección distribuida a los clientes y la CA del kit como CA de confianza.",
+    "en": "Outbound TLS inspection with the inspection CA trusted by clients and the testkit CA as a trusted CA."
    },
    "evidence": {
     "es": "Resultados del portal (Word/CSV) y registros del firewall filtrados por IP de origen y hora.",
@@ -3416,7 +3476,7 @@
       "es": "El servidor devuelve la IP y cabeceras que ve.",
       "en": "The server returns the IP and headers it sees."
      },
-     "blade": "HTTPSi",
+     "blade": "TLS inspection",
      "url": "https://inspect.testkit.lab/whoami",
      "args": [
       "--resolve",
@@ -3426,6 +3486,12 @@
      "id": "TLS-07.1"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "Detrás de GWLB el firewall es transparente: conserva la IP original y no añade cabeceras de proxy.",
+     "en": "Behind GWLB the firewall is transparent: it keeps the original IP and adds no proxy headers."
+    }
+   },
    "priority_label": {
     "es": "Media",
     "en": "Medium"
@@ -3443,13 +3509,9 @@
     "es": "Se obtiene el sobrecoste real de handshake y latencia.",
     "en": "The real handshake and latency overhead is measured."
    },
-   "how": {
-    "es": "100 conexiones HTTPS nuevas con y sin descifrado al mismo servidor; se comparan percentiles.",
-    "en": "100 new HTTPS connections with and without decryption to the same server; percentiles are compared."
-   },
    "requires": {
-    "es": "HTTPS Inspection (outbound) con la CA de inspección distribuida a los clientes y la CA del kit como CA de confianza.",
-    "en": "Outbound HTTPS Inspection with the inspection CA trusted by clients and the testkit CA as a trusted CA."
+    "es": "inspección TLS (outbound) con la CA de inspección distribuida a los clientes y la CA del kit como CA de confianza.",
+    "en": "Outbound TLS inspection with the inspection CA trusted by clients and the testkit CA as a trusted CA."
    },
    "evidence": {
     "es": "Resultados del portal (Word/CSV) y registros del firewall filtrados por IP de origen y hora.",
@@ -3458,8 +3520,8 @@
    "checks": [
     {
      "name": {
-      "es": "Sobrecoste de HTTPS Inspection",
-      "en": "HTTPS Inspection overhead"
+      "es": "Sobrecoste de inspección TLS",
+      "en": "TLS inspection overhead"
      },
      "type": "https_bench",
      "expect": "MEASURE",
@@ -3467,12 +3529,18 @@
       "es": "inspect.testkit.lab frente a nodecrypt.testkit.lab.",
       "en": "inspect.testkit.lab vs nodecrypt.testkit.lab."
      },
-     "blade": "HTTPSi",
+     "blade": "TLS inspection",
      "n": 100,
      "skip_if_server": true,
      "id": "TLS-08.1"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "100 conexiones HTTPS nuevas con y sin descifrado al mismo servidor; se comparan percentiles.",
+     "en": "100 new HTTPS connections with and without decryption to the same server; percentiles are compared."
+    }
+   },
    "priority_label": {
     "es": "Crítica",
     "en": "Critical"
@@ -3490,13 +3558,9 @@
     "es": "Las cargas de IPS y AV dentro de HTTPS se bloquean igual que en HTTP.",
     "en": "IPS and AV payloads inside HTTPS are blocked as in HTTP."
    },
-   "how": {
-    "es": "HTTPS Inspection este-oeste devuelve la visibilidad a IPS, AV y DLP.",
-    "en": "East-west HTTPS Inspection restores visibility for IPS, AV and DLP."
-   },
    "requires": {
-    "es": "HTTPS Inspection (outbound) con la CA de inspección distribuida a los clientes y la CA del kit como CA de confianza.",
-    "en": "Outbound HTTPS Inspection with the inspection CA trusted by clients and the testkit CA as a trusted CA."
+    "es": "inspección TLS (outbound) con la CA de inspección distribuida a los clientes y la CA del kit como CA de confianza.",
+    "en": "Outbound TLS inspection with the inspection CA trusted by clients and the testkit CA as a trusted CA."
    },
    "evidence": {
     "es": "Resultados del portal (Word/CSV) y registros del firewall filtrados por IP de origen y hora.",
@@ -3516,10 +3580,10 @@
      ],
      "expect": "BLOCK",
      "explain": {
-      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: HTTPS Inspection descifra y los blades inspeccionan el contenido.",
-      "en": "HTTPS request to the server with SNI inspect.testkit.lab: HTTPS Inspection decrypts and the blades inspect the content."
+      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: inspección TLS descifra y los blades inspeccionan el contenido.",
+      "en": "HTTPS request to the server with SNI inspect.testkit.lab: TLS inspection decrypts and the blades inspect the content."
      },
-     "blade": "IPS / HTTPSi",
+     "blade": "IPS / TLS inspection",
      "skip_if_server": true,
      "id": "TLS-09.1"
     },
@@ -3537,10 +3601,10 @@
      ],
      "expect": "BLOCK",
      "explain": {
-      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: HTTPS Inspection descifra y los blades inspeccionan el contenido.",
-      "en": "HTTPS request to the server with SNI inspect.testkit.lab: HTTPS Inspection decrypts and the blades inspect the content."
+      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: inspección TLS descifra y los blades inspeccionan el contenido.",
+      "en": "HTTPS request to the server with SNI inspect.testkit.lab: TLS inspection decrypts and the blades inspect the content."
      },
-     "blade": "IPS / HTTPSi",
+     "blade": "IPS / TLS inspection",
      "skip_if_server": true,
      "id": "TLS-09.2"
     },
@@ -3559,10 +3623,10 @@
      ],
      "expect": "BLOCK",
      "explain": {
-      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: HTTPS Inspection descifra y los blades inspeccionan el contenido.",
-      "en": "HTTPS request to the server with SNI inspect.testkit.lab: HTTPS Inspection decrypts and the blades inspect the content."
+      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: inspección TLS descifra y los blades inspeccionan el contenido.",
+      "en": "HTTPS request to the server with SNI inspect.testkit.lab: TLS inspection decrypts and the blades inspect the content."
      },
-     "blade": "IPS / HTTPSi",
+     "blade": "IPS / TLS inspection",
      "skip_if_server": true,
      "id": "TLS-09.3"
     },
@@ -3581,10 +3645,10 @@
      ],
      "expect": "BLOCK",
      "explain": {
-      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: HTTPS Inspection descifra y los blades inspeccionan el contenido.",
-      "en": "HTTPS request to the server with SNI inspect.testkit.lab: HTTPS Inspection decrypts and the blades inspect the content."
+      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: inspección TLS descifra y los blades inspeccionan el contenido.",
+      "en": "HTTPS request to the server with SNI inspect.testkit.lab: TLS inspection decrypts and the blades inspect the content."
      },
-     "blade": "IPS / HTTPSi",
+     "blade": "IPS / TLS inspection",
      "skip_if_server": true,
      "id": "TLS-09.4"
     },
@@ -3601,10 +3665,10 @@
      ],
      "expect": "BLOCK",
      "explain": {
-      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: HTTPS Inspection descifra y los blades inspeccionan el contenido.",
-      "en": "HTTPS request to the server with SNI inspect.testkit.lab: HTTPS Inspection decrypts and the blades inspect the content."
+      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: inspección TLS descifra y los blades inspeccionan el contenido.",
+      "en": "HTTPS request to the server with SNI inspect.testkit.lab: TLS inspection decrypts and the blades inspect the content."
      },
-     "blade": "Anti-Virus / HTTPSi",
+     "blade": "Anti-malware / TLS inspection",
      "skip_if_server": true,
      "id": "TLS-09.5"
     },
@@ -3624,11 +3688,17 @@
       "es": "Control: tráfico legítimo, no debe bloquearse.",
       "en": "Control: legitimate traffic, must not be blocked."
      },
-     "blade": "HTTPSi",
+     "blade": "TLS inspection",
      "skip_if_server": true,
      "id": "TLS-09.6"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "HTTPS Inspection este-oeste devuelve la visibilidad a IPS, AV y DLP.",
+     "en": "East-west HTTPS Inspection restores visibility for IPS, AV and DLP."
+    }
+   },
    "priority_label": {
     "es": "Alta",
     "en": "High"
@@ -3646,13 +3716,9 @@
     "es": "Ninguna técnica permite eludir los controles.",
     "en": "No technique bypasses the controls."
    },
-   "how": {
-    "es": "Con HTTPS Inspection el gateway ve el Host real, descomprime gzip, reensambla chunked/multipart y valida el protocolo por puerto.",
-    "en": "With HTTPS Inspection the gateway sees the real Host, decompresses gzip, reassembles chunked/multipart and validates the protocol per port."
-   },
    "requires": {
-    "es": "HTTPS Inspection (outbound) con la CA de inspección distribuida a los clientes y la CA del kit como CA de confianza.",
-    "en": "Outbound HTTPS Inspection with the inspection CA trusted by clients and the testkit CA as a trusted CA."
+    "es": "inspección TLS (outbound) con la CA de inspección distribuida a los clientes y la CA del kit como CA de confianza.",
+    "en": "Outbound TLS inspection with the inspection CA trusted by clients and the testkit CA as a trusted CA."
    },
    "evidence": {
     "es": "Resultados del portal (Word/CSV) y registros del firewall filtrados por IP de origen y hora.",
@@ -3675,7 +3741,7 @@
       "es": "Con descifrado se ve el Host real.",
       "en": "With decryption the real Host is visible."
      },
-     "blade": "App Control / HTTPSi",
+     "blade": "Application control / TLS inspection",
      "id": "TLS-10.1"
     },
     {
@@ -3691,10 +3757,10 @@
      ],
      "expect": "BLOCK",
      "explain": {
-      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: HTTPS Inspection descifra y los blades inspeccionan el contenido.",
-      "en": "HTTPS request to the server with SNI inspect.testkit.lab: HTTPS Inspection decrypts and the blades inspect the content."
+      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: inspección TLS descifra y los blades inspeccionan el contenido.",
+      "en": "HTTPS request to the server with SNI inspect.testkit.lab: TLS inspection decrypts and the blades inspect the content."
      },
-     "blade": "Anti-Virus / HTTPSi",
+     "blade": "Anti-malware / TLS inspection",
      "skip_if_server": true,
      "id": "TLS-10.2"
     },
@@ -3713,10 +3779,10 @@
      ],
      "expect": "BLOCK",
      "explain": {
-      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: HTTPS Inspection descifra y los blades inspeccionan el contenido.",
-      "en": "HTTPS request to the server with SNI inspect.testkit.lab: HTTPS Inspection decrypts and the blades inspect the content."
+      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: inspección TLS descifra y los blades inspeccionan el contenido.",
+      "en": "HTTPS request to the server with SNI inspect.testkit.lab: TLS inspection decrypts and the blades inspect the content."
      },
-     "blade": "Anti-Virus / HTTPSi",
+     "blade": "Anti-malware / TLS inspection",
      "skip_if_server": true,
      "id": "TLS-10.3"
     },
@@ -3738,10 +3804,10 @@
      ],
      "expect": "BLOCK",
      "explain": {
-      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: HTTPS Inspection descifra y los blades inspeccionan el contenido.",
-      "en": "HTTPS request to the server with SNI inspect.testkit.lab: HTTPS Inspection decrypts and the blades inspect the content."
+      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: inspección TLS descifra y los blades inspeccionan el contenido.",
+      "en": "HTTPS request to the server with SNI inspect.testkit.lab: TLS inspection decrypts and the blades inspect the content."
      },
-     "blade": "IPS / HTTPSi",
+     "blade": "IPS / TLS inspection",
      "skip_if_server": true,
      "id": "TLS-10.4"
     },
@@ -3778,10 +3844,10 @@
      ],
      "expect": "BLOCK",
      "explain": {
-      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: HTTPS Inspection descifra y los blades inspeccionan el contenido.",
-      "en": "HTTPS request to the server with SNI inspect.testkit.lab: HTTPS Inspection decrypts and the blades inspect the content."
+      "es": "Petición HTTPS al servidor con SNI inspect.testkit.lab: inspección TLS descifra y los blades inspeccionan el contenido.",
+      "en": "HTTPS request to the server with SNI inspect.testkit.lab: TLS inspection decrypts and the blades inspect the content."
      },
-     "blade": "Content Awareness / HTTPSi",
+     "blade": "DLP / TLS inspection",
      "skip_roles": [
       "dlp_exception_client"
      ],
@@ -3789,6 +3855,12 @@
      "id": "TLS-10.6"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "Con HTTPS Inspection el gateway ve el Host real, descomprime gzip, reensambla chunked/multipart y valida el protocolo por puerto.",
+     "en": "With HTTPS Inspection the gateway sees the real Host, decompresses gzip, reassembles chunked/multipart and validates the protocol per port."
+    }
+   },
    "priority_label": {
     "es": "Alta",
     "en": "High"
@@ -3806,13 +3878,9 @@
     "es": "La aplicación se identifica por protocolo y no por puerto.",
     "en": "The application is identified by protocol, not by port."
    },
-   "how": {
-    "es": "App Control identifica aplicaciones en cualquier puerto y la salida solo admite HTTP/HTTPS con firma de protocolo.",
-    "en": "App Control identifies applications on any port and egress only allows HTTP/HTTPS with protocol signature."
-   },
    "requires": {
-    "es": "Servicios HTTP/HTTPS con 'match by protocol signature' y SSH bloqueado como aplicación.",
-    "en": "HTTP/HTTPS services with 'match by protocol signature' and SSH blocked as an application."
+    "es": "Servicios HTTP/HTTPS con identificación por protocolo (no solo por puerto) y SSH bloqueado como aplicación.",
+    "en": "HTTP/HTTPS services with protocol identification (not only the port) and SSH blocked as an application."
    },
    "evidence": {
     "es": "Resultados del portal (Word/CSV) y registros del firewall filtrados por IP de origen y hora.",
@@ -3846,7 +3914,7 @@
       "es": "SSH sobre el puerto de HTTPS (ssh.github.com).",
       "en": "SSH over the HTTPS port (ssh.github.com)."
      },
-     "blade": "App Control",
+     "blade": "Application control",
      "host": "ssh.github.com",
      "port": 443,
      "id": "APP-01.2"
@@ -3916,6 +3984,12 @@
      "id": "APP-01.6"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "App Control identifica aplicaciones en cualquier puerto y la salida solo admite HTTP/HTTPS con firma de protocolo.",
+     "en": "App Control identifies applications on any port and egress only allows HTTP/HTTPS with protocol signature."
+    }
+   },
    "priority_label": {
     "es": "Alta",
     "en": "High"
@@ -3932,10 +4006,6 @@
    "objective": {
     "es": "Categoría y acción quedan registradas.",
     "en": "Category and action are logged."
-   },
-   "how": {
-    "es": "URL Filtering por categorías y App Control por aplicación, en HTTP y HTTPS.",
-    "en": "URL Filtering by category and App Control by application, over HTTP and HTTPS."
    },
    "requires": {
     "es": "Categorías Gambling y Anonymizer, y aplicaciones Facebook, TikTok, Dropbox y WeTransfer bloqueadas; LinkedIn permitida.",
@@ -3992,7 +4062,7 @@
       "es": "Categoría prohibida.",
       "en": "Forbidden category."
      },
-     "blade": "URL Filtering / HTTPSi",
+     "blade": "URL Filtering / TLS inspection",
      "warmup": true,
      "id": "APP-02.3"
     },
@@ -4026,7 +4096,7 @@
       "es": "Aplicación bloqueada.",
       "en": "Blocked application."
      },
-     "blade": "App Control",
+     "blade": "Application control",
      "id": "APP-02.5"
     },
     {
@@ -4042,7 +4112,7 @@
       "es": "Aplicación bloqueada.",
       "en": "Blocked application."
      },
-     "blade": "App Control",
+     "blade": "Application control",
      "id": "APP-02.6"
     },
     {
@@ -4058,7 +4128,7 @@
       "es": "Compartición de ficheros.",
       "en": "File sharing."
      },
-     "blade": "App Control",
+     "blade": "Application control",
      "id": "APP-02.7"
     },
     {
@@ -4074,7 +4144,7 @@
       "es": "Compartición de ficheros.",
       "en": "File sharing."
      },
-     "blade": "App Control",
+     "blade": "Application control",
      "id": "APP-02.8"
     },
     {
@@ -4090,10 +4160,16 @@
       "es": "Control: tráfico legítimo, no debe bloquearse.",
       "en": "Control: legitimate traffic, must not be blocked."
      },
-     "blade": "App Control",
+     "blade": "Application control",
      "id": "APP-02.9"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "URL Filtering por categorías y App Control por aplicación, en HTTP y HTTPS.",
+     "en": "URL Filtering by category and App Control by application, over HTTP and HTTPS."
+    }
+   },
    "priority_label": {
     "es": "Alta",
     "en": "High"
@@ -4110,10 +4186,6 @@
    "objective": {
     "es": "Se demuestra cuándo se distingue la ruta del dominio.",
     "en": "Shows when the path is distinguished from the domain."
-   },
-   "how": {
-    "es": "Con HTTPS Inspection se ve la URL completa y se puede bloquear una ruta; sin descifrado solo el dominio.",
-    "en": "With HTTPS Inspection the full URL is visible and a path can be blocked; without decryption only the domain."
    },
    "requires": {
     "es": "Sitio personalizado con la ruta bloqueada configurada (config.internet.blocked_path).",
@@ -4172,7 +4244,7 @@
       "es": "Control: tráfico legítimo, no debe bloquearse.",
       "en": "Control: legitimate traffic, must not be blocked."
      },
-     "blade": "URL Filtering / HTTPSi",
+     "blade": "URL Filtering / TLS inspection",
      "id": "APP-03.3"
     },
     {
@@ -4188,13 +4260,19 @@
       "es": "Solo posible con descifrado.",
       "en": "Only possible with decryption."
      },
-     "blade": "URL Filtering / HTTPSi",
+     "blade": "URL Filtering / TLS inspection",
      "needs": [
       "internet.blocked_path"
      ],
      "id": "APP-03.4"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "Con HTTPS Inspection se ve la URL completa y se puede bloquear una ruta; sin descifrado solo el dominio.",
+     "en": "With HTTPS Inspection the full URL is visible and a path can be blocked; without decryption only the domain."
+    }
+   },
    "priority_label": {
     "es": "Alta",
     "en": "High"
@@ -4211,10 +4289,6 @@
    "objective": {
     "es": "Se conoce la superficie cubierta: IP directa, sin SNI, DoH y DoT.",
     "en": "Covered surface is known: direct IP, no SNI, DoH and DoT."
-   },
-   "how": {
-    "es": "Identificación por Host, SNI y certificado; DoH bloqueado como aplicación y DoT por puerto.",
-    "en": "Identification by Host, SNI and certificate; DoH blocked as an application and DoT by port."
    },
    "requires": {
     "es": "Aplicación DoH bloqueada; solo DNS/HTTP/HTTPS en la salida.",
@@ -4241,7 +4315,7 @@
       "es": "Sin consulta DNS.",
       "en": "No DNS query."
      },
-     "blade": "App Control",
+     "blade": "Application control",
      "id": "APP-04.1"
     },
     {
@@ -4260,7 +4334,7 @@
       "es": "Se clasifica por el certificado.",
       "en": "Classified by the certificate."
      },
-     "blade": "App Control / HTTPSi",
+     "blade": "Application control / TLS inspection",
      "id": "APP-04.2"
     },
     {
@@ -4279,7 +4353,7 @@
       "es": "Aplicación DoH.",
       "en": "DoH application."
      },
-     "blade": "App Control",
+     "blade": "Application control",
      "id": "APP-04.3"
     },
     {
@@ -4299,6 +4373,12 @@
      "id": "APP-04.4"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "Identificación por Host, SNI y certificado; DoH bloqueado como aplicación y DoT por puerto.",
+     "en": "Identification by Host, SNI and certificate; DoH blocked as an application and DoT by port."
+    }
+   },
    "priority_label": {
     "es": "Alta",
     "en": "High"
@@ -4315,10 +4395,6 @@
    "objective": {
     "es": "Un servidor no puede abrir conexiones a destinos y puertos no previstos.",
     "en": "A server cannot open connections to unexpected destinations and ports."
-   },
-   "how": {
-    "es": "Salida denegada por defecto; cada intento queda registrado.",
-    "en": "Default-deny egress; every attempt is logged."
    },
    "requires": {
     "es": "Capa de salida con cleanup en Drop.",
@@ -4410,6 +4486,12 @@
      "id": "APP-07.5"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "Salida denegada por defecto; cada intento queda registrado.",
+     "en": "Default-deny egress; every attempt is logged."
+    }
+   },
    "priority_label": {
     "es": "Alta",
     "en": "High"
@@ -4427,13 +4509,9 @@
     "es": "Se detectan y bloquean patrones sensibles sintéticos.",
     "en": "Synthetic sensitive patterns are detected and blocked."
    },
-   "how": {
-    "es": "Content Awareness con tipos de datos PCI e IBAN y tipo de fichero ejecutable.",
-    "en": "Content Awareness with PCI and IBAN data types and executable file type."
-   },
    "requires": {
-    "es": "Reglas de Content Awareness (PCI, IBAN, ejecutables) entre entornos sobre HTTP y HTTPS.",
-    "en": "Content Awareness rules (PCI, IBAN, executables) between environments over HTTP and HTTPS."
+    "es": "Reglas de DLP (inspección de contenido) (PCI, IBAN, ejecutables) entre entornos sobre HTTP y HTTPS.",
+    "en": "DLP (content inspection) rules (PCI, IBAN, executables) between environments over HTTP and HTTPS."
    },
    "evidence": {
     "es": "Resultados del portal (Word/CSV) y registros del firewall filtrados por IP de origen y hora.",
@@ -4456,7 +4534,7 @@
       "es": "Control: tráfico legítimo, no debe bloquearse.",
       "en": "Control: legitimate traffic, must not be blocked."
      },
-     "blade": "Content Awareness",
+     "blade": "DLP",
      "skip_if_server": true,
      "id": "DLP-01.1"
     },
@@ -4473,10 +4551,10 @@
      ],
      "expect": "BLOCK",
      "explain": {
-      "es": "Content Awareness inspecciona el contenido transferido (subida y descarga) y bloquea datos sensibles sintéticos.",
-      "en": "Content Awareness inspects transferred content (upload and download) and blocks synthetic sensitive data."
+      "es": "DLP (inspección de contenido) inspecciona el contenido transferido (subida y descarga) y bloquea datos sensibles sintéticos.",
+      "en": "DLP (content inspection) inspects transferred content (upload and download) and blocks synthetic sensitive data."
      },
-     "blade": "Content Awareness",
+     "blade": "DLP",
      "skip_roles": [
       "dlp_exception_client"
      ],
@@ -4496,10 +4574,10 @@
      ],
      "expect": "BLOCK",
      "explain": {
-      "es": "Content Awareness inspecciona el contenido transferido (subida y descarga) y bloquea datos sensibles sintéticos.",
-      "en": "Content Awareness inspects transferred content (upload and download) and blocks synthetic sensitive data."
+      "es": "DLP (inspección de contenido) inspecciona el contenido transferido (subida y descarga) y bloquea datos sensibles sintéticos.",
+      "en": "DLP (content inspection) inspects transferred content (upload and download) and blocks synthetic sensitive data."
      },
-     "blade": "Content Awareness",
+     "blade": "DLP",
      "skip_roles": [
       "dlp_exception_client"
      ],
@@ -4516,10 +4594,10 @@
      "args": [],
      "expect": "BLOCK",
      "explain": {
-      "es": "Content Awareness inspecciona el contenido transferido (subida y descarga) y bloquea datos sensibles sintéticos.",
-      "en": "Content Awareness inspects transferred content (upload and download) and blocks synthetic sensitive data."
+      "es": "DLP (inspección de contenido) inspecciona el contenido transferido (subida y descarga) y bloquea datos sensibles sintéticos.",
+      "en": "DLP (content inspection) inspects transferred content (upload and download) and blocks synthetic sensitive data."
      },
-     "blade": "Content Awareness",
+     "blade": "DLP",
      "skip_if_server": true,
      "id": "DLP-01.4"
     },
@@ -4536,11 +4614,17 @@
       "es": "Tipo de fichero ejecutable.",
       "en": "Executable file type."
      },
-     "blade": "Content Awareness",
+     "blade": "DLP",
      "skip_if_server": true,
      "id": "DLP-01.5"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "Content Awareness con tipos de datos PCI e IBAN y tipo de fichero ejecutable.",
+     "en": "Content Awareness with PCI and IBAN data types and executable file type."
+    }
+   },
    "priority_label": {
     "es": "Media",
     "en": "Medium"
@@ -4557,10 +4641,6 @@
    "objective": {
     "es": "La excepción se aplica solo al activo y sentido aprobados.",
     "en": "The exception applies only to the approved asset and direction."
-   },
-   "how": {
-    "es": "Regla de excepción (solo subida desde dlp_exception_client al servidor) por encima de la de bloqueo.",
-    "en": "Exception rule (upload only, from dlp_exception_client to the server) above the blocking rule."
    },
    "requires": {
     "es": "Rol dlp_exception_client y regla de excepción con dirección 'up'.",
@@ -4587,7 +4667,7 @@
       "es": "Dentro del alcance.",
       "en": "In scope."
      },
-     "blade": "Content Awareness",
+     "blade": "DLP",
      "roles": [
       "dlp_exception_client"
      ],
@@ -4612,7 +4692,7 @@
       "es": "Mismo fichero y destino desde otro activo.",
       "en": "Same file and destination from another asset."
      },
-     "blade": "Content Awareness",
+     "blade": "DLP",
      "skip_roles": [
       "dlp_exception_client"
      ],
@@ -4635,7 +4715,7 @@
       "es": "La excepción solo cubre la subida.",
       "en": "The exception only covers uploads."
      },
-     "blade": "Content Awareness",
+     "blade": "DLP",
      "roles": [
       "dlp_exception_client"
      ],
@@ -4645,6 +4725,12 @@
      "id": "DLP-02.3"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "Regla de excepción (solo subida desde dlp_exception_client al servidor) por encima de la de bloqueo.",
+     "en": "Exception rule (upload only, from dlp_exception_client to the server) above the blocking rule."
+    }
+   },
    "priority_label": {
     "es": "Media",
     "en": "Medium"
@@ -4662,13 +4748,9 @@
     "es": "Se documentan los límites por formato, cifrado y tamaño.",
     "en": "Limits by format, encryption and size are documented."
    },
-   "how": {
-    "es": "Content Awareness sobre HTTPS descifrado, ficheros grandes y Office.",
-    "en": "Content Awareness on decrypted HTTPS, large files and Office."
-   },
    "requires": {
-    "es": "Reglas de Content Awareness (PCI, IBAN, ejecutables) entre entornos sobre HTTP y HTTPS.",
-    "en": "Content Awareness rules (PCI, IBAN, executables) between environments over HTTP and HTTPS."
+    "es": "Reglas de DLP (inspección de contenido) (PCI, IBAN, ejecutables) entre entornos sobre HTTP y HTTPS.",
+    "en": "DLP (content inspection) rules (PCI, IBAN, executables) between environments over HTTP and HTTPS."
    },
    "evidence": {
     "es": "Resultados del portal (Word/CSV) y registros del firewall filtrados por IP de origen y hora.",
@@ -4690,10 +4772,10 @@
      ],
      "expect": "BLOCK",
      "explain": {
-      "es": "Content Awareness inspecciona el contenido transferido (subida y descarga) y bloquea datos sensibles sintéticos.",
-      "en": "Content Awareness inspects transferred content (upload and download) and blocks synthetic sensitive data."
+      "es": "DLP (inspección de contenido) inspecciona el contenido transferido (subida y descarga) y bloquea datos sensibles sintéticos.",
+      "en": "DLP (content inspection) inspects transferred content (upload and download) and blocks synthetic sensitive data."
      },
-     "blade": "Content Awareness / HTTPSi",
+     "blade": "DLP / TLS inspection",
      "skip_roles": [
       "dlp_exception_client"
      ],
@@ -4713,10 +4795,10 @@
      ],
      "expect": "BLOCK",
      "explain": {
-      "es": "Content Awareness inspecciona el contenido transferido (subida y descarga) y bloquea datos sensibles sintéticos.",
-      "en": "Content Awareness inspects transferred content (upload and download) and blocks synthetic sensitive data."
+      "es": "DLP (inspección de contenido) inspecciona el contenido transferido (subida y descarga) y bloquea datos sensibles sintéticos.",
+      "en": "DLP (content inspection) inspects transferred content (upload and download) and blocks synthetic sensitive data."
      },
-     "blade": "Content Awareness / HTTPSi",
+     "blade": "DLP / TLS inspection",
      "skip_if_server": true,
      "id": "DLP-03.2"
     },
@@ -4730,10 +4812,10 @@
      "args": [],
      "expect": "BLOCK",
      "explain": {
-      "es": "Content Awareness inspecciona el contenido transferido (subida y descarga) y bloquea datos sensibles sintéticos.",
-      "en": "Content Awareness inspects transferred content (upload and download) and blocks synthetic sensitive data."
+      "es": "DLP (inspección de contenido) inspecciona el contenido transferido (subida y descarga) y bloquea datos sensibles sintéticos.",
+      "en": "DLP (content inspection) inspects transferred content (upload and download) and blocks synthetic sensitive data."
      },
-     "blade": "Content Awareness",
+     "blade": "DLP",
      "skip_if_server": true,
      "id": "DLP-03.3"
     },
@@ -4747,10 +4829,10 @@
      "args": [],
      "expect": "BLOCK",
      "explain": {
-      "es": "Content Awareness inspecciona el contenido transferido (subida y descarga) y bloquea datos sensibles sintéticos.",
-      "en": "Content Awareness inspects transferred content (upload and download) and blocks synthetic sensitive data."
+      "es": "DLP (inspección de contenido) inspecciona el contenido transferido (subida y descarga) y bloquea datos sensibles sintéticos.",
+      "en": "DLP (content inspection) inspects transferred content (upload and download) and blocks synthetic sensitive data."
      },
-     "blade": "Content Awareness",
+     "blade": "DLP",
      "skip_if_server": true,
      "id": "DLP-03.4"
     },
@@ -4767,14 +4849,20 @@
      ],
      "expect": "BLOCK",
      "explain": {
-      "es": "Content Awareness inspecciona el contenido transferido (subida y descarga) y bloquea datos sensibles sintéticos.",
-      "en": "Content Awareness inspects transferred content (upload and download) and blocks synthetic sensitive data."
+      "es": "DLP (inspección de contenido) inspecciona el contenido transferido (subida y descarga) y bloquea datos sensibles sintéticos.",
+      "en": "DLP (content inspection) inspects transferred content (upload and download) and blocks synthetic sensitive data."
      },
-     "blade": "Content Awareness / HTTPSi",
+     "blade": "DLP / TLS inspection",
      "skip_if_server": true,
      "id": "DLP-03.5"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "Content Awareness sobre HTTPS descifrado, ficheros grandes y Office.",
+     "en": "Content Awareness on decrypted HTTPS, large files and Office."
+    }
+   },
    "priority_label": {
     "es": "Media",
     "en": "Medium"
@@ -4791,10 +4879,6 @@
    "objective": {
     "es": "Se documenta qué cubre el IPS y qué requiere un WAF.",
     "en": "Documents what the IPS covers and what needs a WAF."
-   },
-   "how": {
-    "es": "El IPS cubre las clases comunes de ataque web. La protección completa de aplicaciones y API (incluidas tautologías en formularios y JSON) corresponde a Check Point CloudGuard WAF.",
-    "en": "IPS covers common web attack classes. Full application and API protection (including tautologies in forms and JSON) belongs to Check Point CloudGuard WAF."
    },
    "requires": {
     "es": "IPS en Prevent.",
@@ -4855,7 +4939,7 @@
       "es": "Clase propia de un WAF: informativa.",
       "en": "WAF-specific class: informative."
      },
-     "blade": "IPS → CloudGuard WAF",
+     "blade": "IPS → WAF",
      "informative": true,
      "skip_if_server": true,
      "id": "WAF-01.3"
@@ -4878,12 +4962,18 @@
       "es": "Clase propia de un WAF: informativa.",
       "en": "WAF-specific class: informative."
      },
-     "blade": "IPS → CloudGuard WAF",
+     "blade": "IPS → WAF",
      "informative": true,
      "skip_if_server": true,
      "id": "WAF-01.4"
     }
    ],
+   "vendor_notes": {
+    "checkpoint": {
+     "es": "El IPS cubre las clases comunes de ataque web. La protección completa de aplicaciones y API (incluidas tautologías en formularios y JSON) corresponde a Check Point CloudGuard WAF.",
+     "en": "IPS covers common web attack classes. Full application and API protection (including tautologies in forms and JSON) belongs to Check Point CloudGuard WAF."
+    }
+   },
    "priority_label": {
     "es": "Media",
     "en": "Medium"

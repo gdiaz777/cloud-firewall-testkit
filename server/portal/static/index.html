@@ -40,6 +40,7 @@
       <h2 data-i18n="runs"></h2>
       <p class="muted small" data-i18n="runs_help"></p>
       <div id="runs"></div>
+      <div id="cmpbar" class="cmpbar"></div>
     </aside>
   </main>
 </div>
@@ -48,10 +49,20 @@
   <main class="settings">
     <p class="muted" data-i18n="set_intro"></p>
     <section class="card">
+      <h2 data-i18n="set_solution"></h2>
+      <p class="muted small" data-i18n="set_solution_help"></p>
+      <div id="solution" class="form"></div>
+    </section>
+    <section class="card">
+      <h2 data-i18n="set_server"></h2>
+      <p class="muted small" data-i18n="set_server_help"></p>
+      <div id="server" class="form"></div>
+    </section>
+    <section class="card">
       <h2 data-i18n="set_envs"></h2>
       <p class="muted small" data-i18n="set_envs_help"></p>
-      <table class="grid" id="envs"><thead><tr><th data-i18n="col_name"></th><th data-i18n="col_ip"></th><th>AZ</th><th data-i18n="col_desc"></th><th data-i18n="col_server"></th><th data-i18n="col_peer"></th><th></th></tr></thead><tbody></tbody></table>
-      <button class="btn sm" id="addenv" data-i18n="add_env"></button>
+      <table class="grid" id="envs"><thead><tr><th data-i18n="col_name"></th><th data-i18n="col_ip"></th><th data-i18n="col_cidr"></th><th>AZ</th><th data-i18n="col_desc"></th><th data-i18n="col_server"></th><th data-i18n="col_peer"></th><th></th></tr></thead><tbody></tbody></table>
+      <button class="btn sm" id="addenv" data-i18n="add_env"></button> <button class="btn sm" id="addagents" data-i18n="add_agents"></button>
     </section>
     <section class="card">
       <h2 data-i18n="set_matrix"></h2>
@@ -68,6 +79,11 @@
       <h2 data-i18n="set_internet"></h2>
       <p class="muted small" data-i18n="set_internet_help"></p>
       <div id="internet" class="form"></div>
+    </section>
+    <section class="card">
+      <h2 data-i18n="set_ca"></h2>
+      <p class="muted small" data-i18n="set_ca_help"></p>
+      <textarea id="capem" rows="6" spellcheck="false" placeholder="-----BEGIN CERTIFICATE-----"></textarea>
     </section>
     <section class="card">
       <h2>JSON</h2>

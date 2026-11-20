@@ -101,7 +101,7 @@ function callout(title, text, kind = "info") {
 }
 const spacer = (after = 120) => new Paragraph({ spacing: { after }, children: [] });
 
-function cover({ title, subtitle, meta, kicker = "CHECK POINT CLOUD FIREWALL · SECURITY VALIDATION" }) {
+function cover({ title, subtitle, meta, kicker = "FIREWALL TESTKIT · SECURITY VALIDATION" }) {
   return [
     new Paragraph({ spacing: { before: 2400, after: 120 }, children: [run(kicker, { size: 20, bold: true, color: C.accent, characterSpacing: 40 })] }),
     new Paragraph({ spacing: { after: 240 }, border: { bottom: { style: BorderStyle.SINGLE, size: 12, color: C.accent, space: 8 } },
@@ -112,9 +112,9 @@ function cover({ title, subtitle, meta, kicker = "CHECK POINT CLOUD FIREWALL · 
   ];
 }
 
-function makeDoc({ title, children, footer = "Check Point Software Technologies · Confidential · Page " }) {
+function makeDoc({ title, children, footer = "Firewall Testkit · Confidential · Page " }) {
   return new Document({
-    creator: "Check Point Software Technologies", title, features: { updateFields: true },
+    creator: "Firewall Testkit", title, features: { updateFields: true },
     styles: {
       default: { document: { run: { font: FONT, size: 21, color: C.navy } } },
       paragraphStyles: [

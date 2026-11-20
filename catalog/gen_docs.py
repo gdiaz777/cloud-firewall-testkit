@@ -8,12 +8,12 @@ EXP = {"en": {"ALLOW": "Allowed", "BLOCK": "Blocked", "INSPECTED": "Decrypted", 
               "PRESERVED": "IP preserved", "LIMITED": "Authorized only", "MEASURE": "Measure", "NO_FLOW": "No flow", "MATRIX": "Per matrix"},
        "es": {"ALLOW": "Permitido", "BLOCK": "Bloqueado", "INSPECTED": "Descifrado", "NOT_INSPECTED": "Sin descifrar", "VALID": "Cert. válido", "INVALID": "Cert. rechazado",
               "PRESERVED": "IP conservada", "LIMITED": "Solo autorizados", "MEASURE": "Medida", "NO_FLOW": "Sin flujo", "MATRIX": "Según matriz"}}
-TX = {"en": dict(file="docs/en/test-catalog.md", title="Test catalog", intro="Generated from `catalog/tests.json`. Every case lists its objective, how Check Point Cloud Firewall handles it, the policy prerequisites and the automated checks.",
-                 summary="Summary", domain="Domain", cases="Cases", checks="Checks", obj="Objective", how="How Check Point Cloud Firewall handles it", req="Policy prerequisites",
-                 evi="Evidence", prio="Priority", id="ID", check="Check", what="What it does", exp="Expected", blade="Blade", only="only from role", inf="informative", other="Español: [catalogo-pruebas.md](../es/catalogo-pruebas.md)"),
-      "es": dict(file="docs/es/catalogo-pruebas.md", title="Catálogo de pruebas", intro="Generado desde `catalog/tests.json`. Cada caso indica su objetivo, cómo lo resuelve Check Point Cloud Firewall, los requisitos de política y las comprobaciones automáticas.",
-                 summary="Resumen", domain="Dominio", cases="Casos", checks="Comprobaciones", obj="Objetivo", how="Cómo lo resuelve Check Point Cloud Firewall", req="Requisitos de política",
-                 evi="Evidencias", prio="Prioridad", id="ID", check="Prueba", what="Qué hace", exp="Esperado", blade="Blade", only="solo desde el papel", inf="informativa", other="English: [test-catalog.md](../en/test-catalog.md)")}
+TX = {"en": dict(file="docs/en/test-catalog.md", title="Test catalog", intro="Generated from `catalog/tests.json`. Every case lists its objective, the policy prerequisites, the automated checks and, separately, notes on how Check Point handles it (shown in the portal and reports only when the solution under test is Check Point).",
+                 summary="Summary", domain="Domain", cases="Cases", checks="Checks", obj="Objective", how="Check Point notes", req="Policy prerequisites",
+                 evi="Evidence", prio="Priority", id="ID", check="Check", what="What it does", exp="Expected", blade="Capability", only="only from role", inf="informative", other="Español: [catalogo-pruebas.md](../es/catalogo-pruebas.md)"),
+      "es": dict(file="docs/es/catalogo-pruebas.md", title="Catálogo de pruebas", intro="Generado desde `catalog/tests.json`. Cada caso indica su objetivo, los requisitos de política, las comprobaciones automáticas y, aparte, notas de cómo lo resuelve Check Point (en el portal y los informes solo aparecen si la solución probada es Check Point).",
+                 summary="Resumen", domain="Dominio", cases="Casos", checks="Comprobaciones", obj="Objetivo", how="Notas de Check Point", req="Requisitos de política",
+                 evi="Evidencias", prio="Prioridad", id="ID", check="Prueba", what="Qué hace", exp="Esperado", blade="Capacidad", only="solo desde el papel", inf="informativa", other="English: [test-catalog.md](../en/test-catalog.md)")}
 
 for L, t in TX.items():
     md = [f"# {t['title']}", "", f"_{t['other']}_", "", t["intro"], "", f"## {t['summary']}", "", f"| {t['domain']} | {t['cases']} | {t['checks']} |", "|---|---:|---:|"]
@@ -24,7 +24,7 @@ for L, t in TX.items():
         md += ["", f'<a id="{d["id"].lower()}"></a>', f"## {d['id']} · {d['name'][L]}"]
         for c in [c for c in cat["cases"] if c["domain"] == d["id"]]:
             md += ["", f"### {c['id']} · {c['title'][L]}", "", f"**{t['prio']}:** {c['priority_label'][L]}  ",
-                   f"**{t['obj']}:** {c['objective'][L]}  ", f"**{t['how']}:** {c['how'][L]}  ", f"**{t['req']}:** {c['requires'][L]}", "",
+                   f"**{t['obj']}:** {c['objective'][L]}  ", f"**{t['req']}:** {c['requires'][L]}  ", f"_{t['how']}: {c['vendor_notes']['checkpoint'][L]}_", "",
                    f"| {t['id']} | {t['check']} | {t['what']} | {t['exp']} | {t['blade']} |", "|---|---|---|---|---|"]
             for k in c["checks"]:
                 extra = []

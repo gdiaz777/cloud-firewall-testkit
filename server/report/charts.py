@@ -59,7 +59,7 @@ if doms:
     ax.set_xlabel(TX["checks"]); ax.legend(loc="lower right", frameon=False, fontsize=8)
     fig.tight_layout(); fig.savefig(f"{out}/domains.png", dpi=170); plt.close(fig)
 
-# 3. By blade
+# 3. By capability
 bb = defaultdict(Counter)
 for r in res:
     bb[(r.get("blade") or "Other").split(" / ")[0].split(" (")[0]][r["status"]] += 1
@@ -73,7 +73,7 @@ if bl:
 # 4. HTTP vs HTTPS (checks that must block)
 pp = defaultdict(Counter)
 for r in res:
-    p = "HTTPS" if "HTTPSi" in (r.get("blade") or "") else ("HTTP" if r["type"] == "http" else None)
+    p = "HTTPS" if "TLS inspection" in (r.get("blade") or "") else ("HTTP" if r["type"] == "http" else None)
     if p and r["expect"] == "BLOCK":
         pp[p][r["status"]] += 1
 if pp:

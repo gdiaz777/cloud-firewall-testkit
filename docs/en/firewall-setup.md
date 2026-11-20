@@ -1,4 +1,4 @@
-# Firewall setup
+# Check Point configuration guide
 
 _Español: [configuracion-firewall.md](../es/configuracion-firewall.md)_
 
@@ -46,9 +46,9 @@ the catalog assumes, so results reflect the policy and not a missing prerequisit
 
 ## 5. HTTPS Inspection
 
-1. Create (or import) the **outbound inspection certificate** and export its public part to `certs/inspection_ca.crt`
+1. Create (or import) the **outbound inspection certificate** and paste its public part in the portal Settings → TLS inspection CA
    (clients trust it; in production, deploy it with GPO/MDM).
-2. Add `certs/testkit_ca.crt` as a **trusted CA**, so the gateway can validate the test server when it decrypts
+2. Add the testkit CA (`http://<server>/portal/api/bootstrap`, field `testkit_ca`) as a **trusted CA**, so the gateway can validate the test server when it decrypts
    east-west HTTPS.
 3. HTTPS layer rules, in this order:
    - Bypass: custom site with `nodecrypt.testkit.lab` and `mtls.testkit.lab` (TLS-04/05).

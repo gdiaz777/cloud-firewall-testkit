@@ -1,4 +1,4 @@
-# Configuración del firewall
+# Guía de configuración de Check Point
 
 _English: [firewall-setup.md](../en/firewall-setup.md)_
 
@@ -48,9 +48,9 @@ asume el catálogo, para que los resultados reflejen la política y no un requis
 
 ## 5. HTTPS Inspection
 
-1. Crear (o importar) el **certificado de inspección outbound** y exportar su parte pública a `certs/inspection_ca.crt`
+1. Crear (o importar) el **certificado de inspección outbound** y pegar su parte pública en Configuración del portal → CA de inspección TLS
    (los clientes confían en ella; en producción, distribuirla por GPO/MDM).
-2. Añadir `certs/testkit_ca.crt` como **CA de confianza**, para que el gateway valide el servidor de pruebas al
+2. Añadir la CA del kit (`http://<servidor>/portal/api/bootstrap`, campo `testkit_ca`) como **CA de confianza**, para que el gateway valide el servidor de pruebas al
    descifrar el HTTPS este-oeste.
 3. Reglas de la capa HTTPS, en este orden:
    - Bypass: sitio personalizado con `nodecrypt.testkit.lab` y `mtls.testkit.lab` (TLS-04/05).
