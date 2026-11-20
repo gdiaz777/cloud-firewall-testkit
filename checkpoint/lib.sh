@@ -13,8 +13,11 @@ die()  { printf '%s\n' "${R}✘ $*${N}" >&2; exit 1; }
 need() { for c in "$@"; do command -v "$c" >/dev/null || die "missing tool: $c"; done; }
 
 load_settings() {
-  [ -s "$SETTINGS" ] || die "no settings: run ./cp-baseline.sh setup first"
-  set -a; . "$SETTINGS"; set +a
+  # MGMT_URL / MGMT_API_KEY (/ POLICY_PACKAGE) can come from the environment (e.g. another automation)
+  if [ -z "${MGMT_URL:-}" ] || [ -z "${MGMT_API_KEY:-}" ]; then
+    [ -s "$SETTINGS" ] || die "no settings: run ./cp-baseline.sh setup first"
+    set -a; . "$SETTINGS"; set +a
+  fi
   PKG=${POLICY_PACKAGE:-FW_Testkit}
 }
 lab() { [ -s "$CONFIG" ] || die "no configuration: $CONFIG"; jq -r "$@" "$CONFIG"; }
