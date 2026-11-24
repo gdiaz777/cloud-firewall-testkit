@@ -33,7 +33,7 @@ nubes o fabricantes esas pruebas salen como *no aplica*; un fabricante nuevo sol
 | Prueba | Cambio | Vuelta atrás |
 |---|---|---|
 | HA-01 | termina un gateway del grupo de autoescalado | el grupo lanza un sustituto (se mide) |
-| HA-02/04 | entradas de denegación en la ACL de red para los gateways de una AZ (/32) y procesos de salud del ASG suspendidos | se eliminan las entradas y se reanudan los procesos (en `finally`) |
+| HA-02/04 | entradas de denegación en la ACL de red (/32) y un security group vacío en los gateways de una AZ, con los procesos de salud del ASG suspendidos | se eliminan las entradas, se restauran los security groups y se reanudan los procesos (en `finally`) |
 | HA-03 | lo mismo para todos los gateways (todo el plano de inspección) | igual |
 | HA-05 | capacidad deseada +1 (gateways existentes protegidos frente a la reducción) | vuelta a la capacidad inicial y protección retirada |
 | IPS-10 | indicador de amenaza + instalación de la política de amenazas en los gateways de prueba | se borra el indicador y se reinstala |
@@ -48,6 +48,6 @@ Las instalaciones de política y run-script solo afectan a los gateways de `mgmt
 
 - **AWS** (equipo de control): `autoscaling:Describe*`, `SuspendProcesses`, `ResumeProcesses`, `TerminateInstanceInAutoScalingGroup`,
   `SetDesiredCapacity`, `SetInstanceProtection`, `UpdateAutoScalingGroup`; `ec2:Describe*`, `CreateNetworkAclEntry`,
-  `DeleteNetworkAclEntry`; `elasticloadbalancing:Describe*`; `cloudwatch:GetMetricStatistics`, `DescribeAlarms`;
+  `DeleteNetworkAclEntry`, `CreateSecurityGroup`, `RevokeSecurityGroupEgress`, `DeleteSecurityGroup`, `ModifyNetworkInterfaceAttribute`; `elasticloadbalancing:Describe*`; `cloudwatch:GetMetricStatistics`, `DescribeAlarms`;
   `iam:GetRole*`, `ListRolePolicies`, `ListAttachedRolePolicies`, `GetPolicy*`; `pricing:GetProducts`.
 - **Gestión**: una clave API cuyo perfil pueda leer, publicar, instalar política y ejecutar scripts en los gateways de prueba.

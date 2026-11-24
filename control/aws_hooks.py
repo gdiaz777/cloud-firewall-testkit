@@ -1,13 +1,14 @@
 """AWS hooks of the control agent: firewall tier behind a Gateway Load Balancer with an Auto Scaling group.
 
 Settings (CONTROL_CONFIG):  aws.region, aws.asg_name (gateways' Auto Scaling group), aws.cme_role_arn (role the
-management uses to read the account, optional), ha.max_outage_s (60), ha.isolation_s (150), ha.provision_timeout_s
+management uses to read the account, optional), ha.max_outage_s (60), ha.isolation_s (240), ha.provision_timeout_s
 (2700), mgmt.post_provision_cmd (optional command run when a new gateway has its policy, e.g. lab-specific updates).
 Credentials: the usual boto3 chain (environment, profile, instance role).
 
 Failures are simulated so that they always undo themselves:
   - gateway loss / AZ loss / whole tier loss: deny entries for the gateways' private IPs (/32) in the subnet network
-    ACL (stateless: cuts GENEVE, health checks and existing flows at once). The ASG health-check processes are
+    ACL (stateless: cuts GENEVE, health checks and existing flows from other subnets) plus an empty security group on
+    the gateway interfaces (the GWLB node of the same subnet is not filtered by ACLs). The ASG health-check processes are
     suspended meanwhile so that the isolated gateways are not replaced; everything is restored in "finally".
   - instance failure: the instance is terminated in the ASG (the ASG launches a replacement).
 """
@@ -84,24 +85,44 @@ class AWS:
         self.asc.resume_processes(AutoScalingGroupName=self.asg_name, ScalingProcesses=list(procs))
 
     def isolate(self, targets):
-        """Network ACL deny entries (in/out) for each gateway IP /32 in its subnet's ACL. Returns what to remove."""
+        """Cuts the gateways off: network ACL deny entries (in/out) for each gateway IP /32 — traffic from other subnets,
+        stateless — plus an empty security group on the gateway interfaces — traffic from the same subnet, where the
+        local GWLB node lives and ACLs do not apply. Returns what to undo."""
         made = []
+        for t in targets:
+            eni = self.ec2.describe_instances(InstanceIds=[t["id"]])["Reservations"][0]["Instances"][0]["NetworkInterfaces"]
+            for e in eni:
+                vpc = e["VpcId"]
+                sg = self.ec2.create_security_group(GroupName=f"testkit-isolation-{t['id']}-{int(time.time())}", Description="Firewall Testkit HA isolation (temporary)", VpcId=vpc)["GroupId"]
+                self.ec2.revoke_security_group_egress(GroupId=sg, IpPermissions=[{"IpProtocol": "-1", "IpRanges": [{"CidrIp": "0.0.0.0/0"}]}])
+                made.append(("sg", e["NetworkInterfaceId"], [g["GroupId"] for g in e["Groups"]], sg))
+                self.ec2.modify_network_interface_attribute(NetworkInterfaceId=e["NetworkInterfaceId"], Groups=[sg])
         for t in targets:
             acl = self.ec2.describe_network_acls(Filters=[{"Name": "association.subnet-id", "Values": [t["subnet"]]}])["NetworkAcls"][0]
             used = {e["RuleNumber"] for e in acl["Entries"]}
             for egress in (False, True):
-                n = next(k for k in range(1, 99) if k not in used and (k, egress) not in {(m[1], m[2]) for m in made if m[0] == acl["NetworkAclId"]})
+                n = next(k for k in range(1, 99) if k not in used and (k, egress) not in {(m[2], m[3]) for m in made if m[0] == "acl" and m[1] == acl["NetworkAclId"]})
                 kw = dict(NetworkAclId=acl["NetworkAclId"], RuleNumber=n, Egress=egress)
                 self.ec2.create_network_acl_entry(Protocol="-1", RuleAction="deny", CidrBlock=t["ip"] + "/32", **kw)
-                made.append((acl["NetworkAclId"], n, egress)); used.add(n)
+                made.append(("acl", acl["NetworkAclId"], n, egress)); used.add(n)
         return made
 
     def unisolate(self, made):
-        for acl, n, egress in made:
+        for m in made:
             try:
-                self.ec2.delete_network_acl_entry(NetworkAclId=acl, RuleNumber=n, Egress=egress)
+                if m[0] == "acl":
+                    self.ec2.delete_network_acl_entry(NetworkAclId=m[1], RuleNumber=m[2], Egress=m[3])
+                else:
+                    self.ec2.modify_network_interface_attribute(NetworkInterfaceId=m[1], Groups=m[2])
             except Exception as e:  # noqa
-                log("could not remove ACL entry", acl, n, e)
+                log("could not undo", m, e)
+        for m in made:
+            if m[0] == "sg":
+                for _ in range(10):
+                    try:
+                        self.ec2.delete_security_group(GroupId=m[3]); break
+                    except Exception:  # noqa
+                        time.sleep(6)
 
     # ---------------------------------------------------------------- vendor adapter (gateway objects in the management)
     def fw_gateways(self):
@@ -281,7 +302,7 @@ def instance_failure(c, ctx):
 # ------------------------------------------------------------------ HA-02 / HA-04 / HA-03 (network isolation)
 def isolation_event(a, ctx, victims, label, sessions=20):
     """Isolates the given gateways for ha.isolation_s with the probes running. Returns (res, ev, t0, t1)."""
-    tg = a.tg_arn(); iso = ctx.setting("ha.isolation_s", 150)
+    tg = a.tg_arn(); iso = max(ctx.setting("ha.isolation_s", 240), 240)   # longer than the GWLB detection (3 × 30 s + margin)
     ids = ctx.start_probes(duration=iso + 900, sessions=sessions); time.sleep(30)
     ev, made = {}, []
     a.suspend()

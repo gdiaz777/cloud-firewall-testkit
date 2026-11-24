@@ -29,7 +29,7 @@ python3 control/agent.py run HA-01       # one-off from the CLI
            "env_file": "<optional file with temporary AWS_* credentials, re-read before every check>"},
   "mgmt": {"url": "https://<management>/web_api", "api_key_env": "MGMT_API_KEY", "package": "FW_Testkit",
            "gateway_prefix": "<only gateways with this prefix are touched>", "post_provision_cmd": "<optional>"},
-  "ha":   {"max_outage_s": 60, "isolation_s": 150, "provision_timeout_s": 2700},
+  "ha":   {"max_outage_s": 60, "isolation_s": 240, "provision_timeout_s": 2700},
   "state_dir": "~/.testkit-control"
 }
 ```
@@ -43,7 +43,7 @@ For other clouds or vendors the checks are reported as *not applicable*; a new v
 | Check | Change | Undo |
 |---|---|---|
 | HA-01 | terminates one gateway in the Auto Scaling group | the group launches a replacement (measured) |
-| HA-02/04 | network ACL deny entries for the gateways of one AZ (/32), ASG health processes suspended | entries removed, processes resumed (in `finally`) |
+| HA-02/04 | network ACL deny entries (/32) and an empty security group on the gateways of one AZ, ASG health processes suspended | entries removed, original security groups restored, processes resumed (in `finally`) |
 | HA-03 | same for every gateway (whole inspection tier) | same |
 | HA-05 | desired capacity +1 (existing gateways protected from scale-in) | back to the initial capacity, protection removed |
 | IPS-10 | threat indicator + threat policy install on the test gateways | indicator deleted + reinstall |
@@ -58,6 +58,6 @@ installations and run-script only target the gateways of `mgmt.gateway_prefix`.
 
 - **AWS** (control host): `autoscaling:Describe*`, `SuspendProcesses`, `ResumeProcesses`, `TerminateInstanceInAutoScalingGroup`,
   `SetDesiredCapacity`, `SetInstanceProtection`, `UpdateAutoScalingGroup`; `ec2:Describe*`, `CreateNetworkAclEntry`,
-  `DeleteNetworkAclEntry`; `elasticloadbalancing:Describe*`; `cloudwatch:GetMetricStatistics`, `DescribeAlarms`;
+  `DeleteNetworkAclEntry`, `CreateSecurityGroup`, `RevokeSecurityGroupEgress`, `DeleteSecurityGroup`, `ModifyNetworkInterfaceAttribute`; `elasticloadbalancing:Describe*`; `cloudwatch:GetMetricStatistics`, `DescribeAlarms`;
   `iam:GetRole*`, `ListRolePolicies`, `ListAttachedRolePolicies`, `GetPolicy*`; `pricing:GetProducts`.
 - **Management**: an API key whose profile can read, publish, install policy and run scripts on the test gateways.
