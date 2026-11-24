@@ -442,8 +442,8 @@ def t_iperf(c, cfg):
     end = j["end"]; ivals = [i["sum"]["bits_per_second"] / 1e6 for i in j.get("intervals", []) if not i["sum"].get("omitted")]
     if "-u" in c.get("args", []):
         s = end["sum"]; pps = s.get("packets", 0) / max(s.get("seconds", secs), 1)
-        return "MEASURE", (f"UDP {s['bits_per_second'] / 1e6:.0f} Mbit/s received, {pps:,.0f} packets/s, loss {s.get('lost_percent', 0):.2f} %, "
-                           f"jitter {s.get('jitter_ms', 0):.3f} ms ({c.get('label', '')}{secs} s)").replace(",", ".")
+        return "MEASURE", (f"UDP {s['bits_per_second'] / 1e6:.0f} Mbit/s received, {pps:.0f} packets/s, loss {s.get('lost_percent', 0):.2f} %, "
+                           f"jitter {s.get('jitter_ms', 0):.3f} ms ({c.get('label', '')}{secs} s)")
     rx, tx = end["sum_received"]["bits_per_second"] / 1e6, end["sum_sent"]
     det = f"TCP {rx:.0f} Mbit/s ({'download' if '-R' in c.get('args', []) else 'upload'}, {c.get('streams', 1)} streams, {secs} s)"
     if ivals:
