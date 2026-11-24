@@ -8586,8 +8586,8 @@
    },
    "vendor_notes": {
     "checkpoint": {
-     "es": "Se añade por API una regla temporal que bloquea http de un cliente al servidor, se publica e instala, se mide cuándo se bloquea el tráfico, se elimina, se reinstala y se mide cuándo vuelve.",
-     "en": "A temporary rule blocking http from a client to the server is added through the API, published and installed; the time to block is measured; then it is removed, reinstalled and the time to recover is measured."
+     "es": "Se añade por API una regla temporal que bloquea HTTPS de un cliente al servidor, se publica e instala, se mide cuándo se bloquea el tráfico, se elimina, se reinstala y se mide cuándo vuelve.",
+     "en": "A temporary rule blocking HTTPS from a client to the server is added through the API, published and installed; the time to block is measured; then it is removed, reinstalled and the time to recover is measured."
     }
    },
    "priority_label": {

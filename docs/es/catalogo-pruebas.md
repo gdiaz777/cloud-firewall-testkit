@@ -1583,7 +1583,7 @@ _Buena práctica de Check Point: Smart-1 Cloud con SSO+MFA, política como códi
 **Prioridad:** Alta · _agente de control_  
 **Objetivo:** Un cambio de política hecho por API se aplica de extremo a extremo y se revierte.  
 **Configuración necesaria en el firewall:** Acceso de escritura a la API de gestión (solo objetos TK_ y gateways de prueba).  
-_Notas de Check Point: Se añade por API una regla temporal que bloquea http de un cliente al servidor, se publica e instala, se mide cuándo se bloquea el tráfico, se elimina, se reinstala y se mide cuándo vuelve._  
+_Notas de Check Point: Se añade por API una regla temporal que bloquea HTTPS de un cliente al servidor, se publica e instala, se mide cuándo se bloquea el tráfico, se elimina, se reinstala y se mide cuándo vuelve._  
 _Buena práctica de Check Point: Terraform provider de Check Point o API con publicación e instalación en el pipeline y revisión por pares._
 
 | ID | Prueba | Qué hace | Esperado | Capacidad |

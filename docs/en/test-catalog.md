@@ -1583,7 +1583,7 @@ _Check Point best practice: Smart-1 Cloud with SSO+MFA, policy as code and per-a
 **Priority:** High · _control agent_  
 **Objective:** A policy change made through the API is enforced end to end and rolled back.  
 **Firewall configuration needed:** Write access to the Management API (TK_ objects and test gateways only).  
-_Check Point notes: A temporary rule blocking http from a client to the server is added through the API, published and installed; the time to block is measured; then it is removed, reinstalled and the time to recover is measured._  
+_Check Point notes: A temporary rule blocking HTTPS from a client to the server is added through the API, published and installed; the time to block is measured; then it is removed, reinstalled and the time to recover is measured._  
 _Check Point best practice: Check Point Terraform provider or API with publish and install in the pipeline and peer review._
 
 | ID | Check | What it does | Expected | Capability |

@@ -434,10 +434,11 @@ def fw_health(c, ctx):
 @hook("checkpoint.api_pipeline")
 def api_pipeline(c, ctx):
     ag = ctx.agent_for(); src, srv = ag["src"], ctx.cfg["server"]
-    probe = [dict(type="tcp", host=srv, port=80, expect="ALLOW", name="http to the server")]
+    # HTTPS, not HTTP: the agents talk to the portal over http on the same server, blocking it would cut them off
+    probe = [dict(type="tcp", host=srv, port=443, expect="ALLOW", name="https to the server")]
     pre = ctx.checks(ag["name"], probe)[0]
     if pre["observed"] != "ALLOW":
-        return "NOT_MET", f"precondition: http to the server is not allowed from {ag.get('env')} ({pre['detail']})"
+        return "NOT_MET", f"precondition: https to the server is not allowed from {ag.get('env')} ({pre['detail']})"
     rule, ev = "TK pipeline probe", {}
     with Mgmt(ctx) as m:
         layer = ctx.setting("mgmt.access_layer", f"{m.pkg} Network")
@@ -446,7 +447,7 @@ def api_pipeline(c, ctx):
             m.call("add-host", {"name": "TK_pipeline_src", "ip-address": src, "ignore-warnings": True, "tags": ["firewall-testkit"]})
             m.call("add-host", {"name": "TK_pipeline_dst", "ip-address": srv, "ignore-warnings": True, "tags": ["firewall-testkit"]})
             m.call("add-access-rule", {"layer": layer, "position": "top", "name": rule, "source": ["TK_pipeline_src"], "destination": ["TK_pipeline_dst"],
-                                       "service": ["http"], "action": "Drop", "track": {"type": "Log"}, "comments": "temporary: OPS-03 change pipeline test"})
+                                       "service": ["https"], "action": "Drop", "track": {"type": "Log"}, "comments": "temporary: OPS-03 change pipeline test"})
             m.publish(); ev["published"] = time.time()
             ev["install1"] = m.install(access=True); t1 = time.time()
             while time.time() - t1 < 300:
@@ -466,7 +467,7 @@ def api_pipeline(c, ctx):
                 time.sleep(5)
     blk = f"{ev['blocked'] - t0:.0f} s after the API call" if ev.get("blocked") else "NOT observed"
     rst = f"{ev['restored'] - t2:.0f} s after the rollback" if ev.get("restored") else "NOT observed"
-    det = (f"Rule added through the API (Drop {(ag.get('env') or '').upper()} → server http) and published in {ev['published'] - t0:.0f} s, access policy installed "
+    det = (f"Rule added through the API (Drop {(ag.get('env') or '').upper()} → server https) and published in {ev['published'] - t0:.0f} s, access policy installed "
            f"in {ev['install1']:.0f} s, traffic blocked {blk}; rule removed, reinstalled in {ev['install2']:.0f} s, traffic allowed again {rst}. "
            "The same calls are what a pipeline (Terraform provider, Ansible, CI/CD) uses.")
     return ("PASS" if ev.get("blocked") and ev.get("restored") else "NOT_MET"), det

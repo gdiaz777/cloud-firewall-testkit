@@ -216,8 +216,8 @@ case("OPS-01", "high", T("Onboarding automatizado y mínimo privilegio", "Automa
      ])
 case("OPS-03", "high", T("Políticas por API, Terraform y CI/CD", "Policies through API, Terraform and CI/CD"),
      T("Un cambio de política hecho por API se aplica de extremo a extremo y se revierte.", "A policy change made through the API is enforced end to end and rolled back."),
-     T("Se añade por API una regla temporal que bloquea http de un cliente al servidor, se publica e instala, se mide cuándo se bloquea el tráfico, se elimina, se reinstala y se mide cuándo vuelve.",
-       "A temporary rule blocking http from a client to the server is added through the API, published and installed; the time to block is measured; then it is removed, reinstalled and the time to recover is measured."),
+     T("Se añade por API una regla temporal que bloquea HTTPS de un cliente al servidor, se publica e instala, se mide cuándo se bloquea el tráfico, se elimina, se reinstala y se mide cuándo vuelve.",
+       "A temporary rule blocking HTTPS from a client to the server is added through the API, published and installed; the time to block is measured; then it is removed, reinstalled and the time to recover is measured."),
      T("Acceso de escritura a la API de gestión (solo objetos TK_ y gateways de prueba).", "Write access to the Management API (TK_ objects and test gateways only)."), EVI_CTRL, [
          hk(T("Cambio y reversión por API medidos", "API change and rollback, measured"), "PASS", "fw.api_pipeline",
             T("Instala la política de acceso dos veces en los gateways de prueba.", "Installs the access policy twice on the test gateways."), "Operations", **DIS),
