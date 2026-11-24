@@ -418,6 +418,258 @@ def t_https_bench(c, cfg):
     return "MEASURE", det
 
 
+# ------------------------------------------------------------------ performance (PERF-*): measurements, run from one client
+def pct(v, p):
+    v = sorted(v)
+    return v[min(len(v) - 1, max(0, int(round(p / 100 * (len(v) - 1)))))] if v else 0.0
+
+
+def t_iperf(c, cfg):
+    """iperf3 against the test server (TCP or UDP). Retries while the server is busy with another test."""
+    host, port, secs = subst(c.get("host", "{SERVER}"), cfg), int(subst(str(c.get("port", 5201)), cfg)), int(c.get("seconds", 15))
+    cmd = ["iperf3", "-c", host, "-p", str(port), "-B", SRC, "-J", "-t", str(secs), "-i", str(c.get("interval", 1)), "-P", str(c.get("streams", 1))] + c.get("args", [])
+    for _ in range(6):
+        rc, out, err = sh(cmd, secs + 40)
+        try:
+            j = json.loads(out)
+        except ValueError:
+            return "ERROR", f"iperf3 rc={rc} {err.strip()[:120]}"
+        if "busy" in str(j.get("error", "")):
+            time.sleep(10); continue
+        break
+    if j.get("error"):
+        return "ERROR", f"iperf3: {j['error'][:150]}"
+    end = j["end"]; ivals = [i["sum"]["bits_per_second"] / 1e6 for i in j.get("intervals", []) if not i["sum"].get("omitted")]
+    if "-u" in c.get("args", []):
+        s = end["sum"]; pps = s.get("packets", 0) / max(s.get("seconds", secs), 1)
+        return "MEASURE", (f"UDP {s['bits_per_second'] / 1e6:.0f} Mbit/s received, {pps:,.0f} packets/s, loss {s.get('lost_percent', 0):.2f} %, "
+                           f"jitter {s.get('jitter_ms', 0):.3f} ms ({c.get('label', '')}{secs} s)").replace(",", ".")
+    rx, tx = end["sum_received"]["bits_per_second"] / 1e6, end["sum_sent"]
+    det = f"TCP {rx:.0f} Mbit/s ({'download' if '-R' in c.get('args', []) else 'upload'}, {c.get('streams', 1)} streams, {secs} s)"
+    if ivals:
+        det += f"; per second min/avg/max {min(ivals):.0f}/{statistics.mean(ivals):.0f}/{max(ivals):.0f}"
+    if "retransmits" in tx:
+        det += f"; retransmissions {tx['retransmits']}"
+    return "MEASURE", det
+
+
+def t_latency(c, cfg):
+    """Latency and jitter p50/p95/p99 (ICMP echo, TCP handshake or full HTTP request)."""
+    host, n, mode = subst(c.get("host", "{SERVER}"), cfg), int(c.get("n", 200)), c.get("mode", "icmp")
+    v = []
+    if mode == "icmp":
+        rc, out, _ = sh(["ping", "-I", SRC, "-c", str(n), "-i", "0.05", "-W", "1", host], n * 0.2 + 20)
+        v = [float(x) for x in re.findall(r"time=([\d.]+)", out)]
+    elif mode == "tcp":
+        for _ in range(n):
+            s = socket.socket(); s.settimeout(2); s.bind((SRC, 0)); t0 = time.perf_counter()
+            try:
+                s.connect((host, int(c.get("port", 80)))); v.append((time.perf_counter() - t0) * 1000)
+            except OSError:
+                pass
+            finally:
+                s.close()
+    else:
+        for _ in range(n):
+            rc, out, _ = sh(["curl", "-s", "-o", "/dev/null", "-w", "%{time_total}", "--max-time", "3", "--interface", SRC, f"http://{host}/index.html"], 6)
+            if rc == 0:
+                v.append(float(out) * 1000)
+    if not v:
+        return "ERROR", f"no answers ({mode})"
+    jit = statistics.mean(abs(a - b) for a, b in zip(v, v[1:])) if len(v) > 1 else 0
+    return "MEASURE", (f"{mode.upper()}: p50 {pct(v, 50):.2f} ms, p95 {pct(v, 95):.2f} ms, p99 {pct(v, 99):.2f} ms, max {max(v):.2f} ms, "
+                       f"jitter {jit:.2f} ms; {len(v)}/{n} answers ({100 * (n - len(v)) / n:.1f} % lost)")
+
+
+def _http_req(s, i):
+    s.sendall(f"GET /index.html?c={i} HTTP/1.1\r\nHost: testkit\r\nConnection: keep-alive\r\n\r\n".encode())
+    buf = b""
+    while b"\r\n\r\n" not in buf:
+        d = s.recv(4096)
+        if not d:
+            raise ConnectionError("closed")
+        buf += d
+    hdr, _, rest = buf.partition(b"\r\n\r\n")
+    m = re.search(rb"Content-Length: (\d+)", hdr, re.I); ln = int(m.group(1)) if m else 0
+    while len(rest) < ln:
+        d = s.recv(65536)
+        if not d:
+            raise ConnectionError("closed")
+        rest += d
+    return hdr.split(b"\r\n", 1)[0].decode("latin1")
+
+
+def raise_nofile():
+    try:
+        import resource
+        soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE); resource.setrlimit(resource.RLIMIT_NOFILE, (hard, hard))
+    except (ValueError, OSError, ImportError):
+        pass
+
+
+def t_concurrent(c, cfg):
+    """Opens N simultaneous TCP sessions, uses each one, holds them and checks they are still alive (state table capacity)."""
+    raise_nofile()
+    host, port, n, hold = subst(c.get("host", "{SERVER}"), cfg), int(c.get("port", 80)), int(c.get("n", 2000)), int(c.get("hold", 30))
+    socks, t0 = [], time.time()
+    for _ in range(n):
+        s = socket.socket(); s.settimeout(3); s.bind((SRC, 0))
+        try:
+            s.connect((host, port)); socks.append(s)
+        except OSError:
+            s.close()
+    est, t_open = len(socks), time.time() - t0
+    first = 0
+    for i, s in enumerate(socks):
+        try:
+            _http_req(s, i); first += 1
+        except OSError:
+            pass
+    time.sleep(hold)
+    alive = 0
+    for i, s in enumerate(socks):
+        try:
+            _http_req(s, i); alive += 1
+        except OSError:
+            pass
+        finally:
+            s.close()
+    if not est:
+        return "ERROR", "no session could be opened"
+    return "MEASURE", (f"{est}/{n} sessions open at the same time (opened in {t_open:.1f} s), {first} answered, "
+                       f"{alive} still alive after {hold} s idle ({100 * alive / n:.1f} %)")
+
+
+def t_cps(c, cfg):
+    """New connections per second: short HTTP requests (connect, GET, close) with fixed concurrency during N seconds."""
+    import asyncio
+    host, port, secs, conc = subst(c.get("host", "{SERVER}"), cfg), int(c.get("port", 80)), int(c.get("seconds", 20)), int(c.get("concurrency", 64))
+    lat, err = [], [0]
+    req = b"GET /index.html HTTP/1.1\r\nHost: testkit\r\nConnection: close\r\n\r\n"
+
+    async def worker(stop):
+        while time.time() < stop:
+            t0 = time.perf_counter()
+            try:
+                r, w = await asyncio.wait_for(asyncio.open_connection(host, port, local_addr=(SRC, 0)), 3)
+                w.write(req); await w.drain(); await asyncio.wait_for(r.read(), 3); w.close()
+                lat.append((time.perf_counter() - t0) * 1000)
+            except (OSError, asyncio.TimeoutError):
+                err[0] += 1
+
+    async def main():
+        stop = time.time() + secs
+        await asyncio.gather(*[worker(stop) for _ in range(conc)])
+    raise_nofile(); t0 = time.time(); asyncio.run(main()); el = time.time() - t0
+    if not lat:
+        return "ERROR", f"no connection completed ({err[0]} errors)"
+    return "MEASURE", (f"{len(lat) / el:.0f} new connections/s sustained for {el:.0f} s ({len(lat)} OK, {err[0]} errors, concurrency {conc}); "
+                       f"request time p50 {pct(lat, 50):.1f} ms, p95 {pct(lat, 95):.1f} ms, p99 {pct(lat, 99):.1f} ms")
+
+
+def t_dl_bench(c, cfg):
+    """Aggregate throughput of P parallel downloads of a large file (HTTP, inspected HTTPS or not decrypted HTTPS)."""
+    url, args, par, secs = subst(c["url"], cfg), subst(c.get("args", []), cfg), int(c.get("parallel", 4)), int(c.get("seconds", 30))
+    stop, tot, n, errs, t0 = time.time() + secs, 0, 0, 0, time.time()
+    while time.time() < stop:
+        ps = [subprocess.Popen(["curl", "-s", "-k", "-o", "/dev/null", "-w", "%{size_download} %{http_code}", "--max-time", str(secs + 30), "--interface", SRC] + args + [url],
+                               stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True) for _ in range(par)]
+        for p in ps:
+            out = (p.communicate()[0] or "0 000").split()
+            if out[-1].startswith("2"):
+                tot += int(float(out[0])); n += 1
+            else:
+                errs += 1
+    el = time.time() - t0
+    if not n:
+        return "ERROR", f"no download completed ({errs} errors)"
+    return "MEASURE", f"{tot * 8 / el / 1e6:.0f} Mbit/s aggregate ({par} parallel downloads, {n} files of {tot / n / 1e6:.0f} MB in {el:.0f} s, {errs} errors)"
+
+
+# ------------------------------------------------------------------ tasks requested by the control agent (HA-*, OBS-*, IPS-10…)
+def _quick(t, cfg):
+    """One fast probe for the continuous probes (2 s timeout). True = the flow went through."""
+    if t["type"] == "tcp":
+        s = socket.socket(); s.settimeout(2); s.bind((SRC, 0))
+        try:
+            s.connect((subst(t["host"], cfg), int(t["port"]))); return True
+        except ConnectionRefusedError:
+            return True
+        except OSError:
+            return False
+        finally:
+            s.close()
+    if t["type"] == "http":
+        rc, out, _ = sh(["curl", "-s", "-k", "-o", "/dev/null", "-w", "%{http_code}", "--max-time", "2", "--interface", SRC] + subst(t.get("args", []), cfg) + [subst(t["url"], cfg)], 5)
+        return rc == 0 and not out.startswith("000")
+    rc, _, _ = sh(["ping", "-I", SRC, "-c", "1", "-W", "1", subst(t["host"], cfg)], 4)
+    return rc == 0
+
+
+def task_probe(p, cfg, stopped):
+    """Continuous probes (one per target and second) until 'duration' or until the control agent stops them."""
+    import threading
+    targets, iv, end = p["targets"], float(p.get("interval", 1)), time.time() + float(p.get("duration", 600))
+    res = {t["name"]: [] for t in targets}
+
+    def loop(t):
+        while time.time() < end and not stop_flag[0]:
+            t0 = time.time(); res[t["name"]].append([round(t0, 1), _quick(t, cfg)])
+            time.sleep(max(0, iv - (time.time() - t0)))
+    stop_flag = [False]
+    th = [threading.Thread(target=loop, args=(t,), daemon=True) for t in targets]
+    [x.start() for x in th]
+    while time.time() < end and any(x.is_alive() for x in th):
+        time.sleep(3)
+        if stopped():
+            stop_flag[0] = True
+    [x.join(10) for x in th]
+    return dict(samples=res)
+
+
+def task_sessions(p, cfg, stopped):
+    """N long-lived HTTP keep-alive sessions; each one sends a request every 'interval' s. Records when each one breaks."""
+    raise_nofile()
+    host, port, n, iv, end = subst(p.get("host", "{SERVER}"), cfg), int(p.get("port", 80)), int(p.get("n", 20)), float(p.get("interval", 2)), time.time() + float(p.get("duration", 600))
+    ss, broken = [], {}
+    for i in range(n):
+        s = socket.socket(); s.settimeout(3); s.bind((SRC, 0))
+        try:
+            s.connect((host, port)); ss.append(s)
+        except OSError:
+            broken[i] = round(time.time(), 1); ss.append(None)
+    t_open = round(time.time(), 1); k = 0
+    while time.time() < end and len(broken) < n:
+        for i, s in enumerate(ss):
+            if i in broken:
+                continue
+            try:
+                _http_req(s, k)
+            except OSError:
+                broken[i] = round(time.time(), 1)
+        k += 1; time.sleep(iv)
+        if k % 3 == 0 and stopped():
+            break
+    for s in ss:
+        if s:
+            s.close()
+    return dict(n=n, opened=t_open, ended=round(time.time(), 1), broken={str(i): t for i, t in broken.items()})
+
+
+def run_task(task, cfg, stopped):
+    kind, p = task["kind"], task.get("params", {})
+    if kind == "probe":
+        return task_probe(p, cfg, stopped)
+    if kind == "sessions":
+        return task_sessions(p, cfg, stopped)
+    if kind == "checks":   # catalog-style checks (traffic generation for logs, IoC, load…)
+        out = []
+        for c in p["checks"]:
+            r = run_check(dict(c, id=c.get("id", "task"), name=c.get("name", c["type"]), expect=c.get("expect", "MEASURE")), cfg); out.append(r)
+        return dict(results=out)
+    raise ValueError(f"unknown task {kind}")
+
+
 SEG_SERVICES = [["icmp", None], ["http", 80], ["https", 443], ["ssh", 22], ["rdp", 3389], ["tcp8080", 8080], ["iperf3", 5201]]
 
 
@@ -442,7 +694,8 @@ def expand_segmatrix(c, cfg):
 
 TYPES = dict(http=t_http, tcp=t_tcp, icmp=t_icmp, dns=t_dns, ntp=t_ntp, quic=t_quic, egress_ip=t_egress_ip, tls_issuer=t_tls_issuer,
              tls_verify=t_tls_verify, echo_ip=t_echo_ip, segmented=t_segmented, tcp_hold=t_tcp_hold, nmap=t_nmap, pmtu=t_pmtu,
-             banner=t_banner, dns_fail=t_dns_fail, https_bench=t_https_bench)
+             banner=t_banner, dns_fail=t_dns_fail, https_bench=t_https_bench, iperf=t_iperf, latency=t_latency, concurrent=t_concurrent,
+             cps=t_cps, dl_bench=t_dl_bench)
 
 
 def applicable(c, cfg):
@@ -475,7 +728,9 @@ def run_check(c, cfg):
         except Exception as e:  # noqa
             obs, det = "ERROR", f"{e.__class__.__name__}: {e}"
         r.update(observed=obs, detail=det)
-        if c["expect"] == "MEASURE":
+        if obs == "SKIP":
+            r["status"] = "SKIP"
+        elif c["expect"] == "MEASURE":
             r["status"] = "INFO" if obs == "MEASURE" else "FAIL"
         elif obs == "ERROR":
             r["status"] = "ERROR"
@@ -485,11 +740,14 @@ def run_check(c, cfg):
     return r
 
 
-def plan(catalog, ids, cfg):
+def plan(catalog, ids, cfg, runner="client"):
+    """Checks of the selection that this kind of agent runs: 'client' (traffic from a workload) or 'control' (operator side)."""
     sel = []
     for case in catalog["cases"]:
         for c in case.get("checks", []):
             if ids and not any(c["id"] == i or case["id"] == i or c["id"].startswith(i + ".") for i in ids):
+                continue
+            if c.get("runner", "client") != runner:
                 continue
             c = dict(c, case=case["id"])
             if c["type"] == "segmatrix":
@@ -530,6 +788,28 @@ def agent():
     while True:
         try:
             job = call(f"/api/agent/poll?agent={name}&env={ENV}&src={SRC}", dict(agent=name, env=ENV, src=SRC))
+            if job.get("task_id"):   # tasks run in parallel (e.g. continuous probes + long sessions during a failover)
+                import threading
+
+                def do_task(job=job):
+                    tid = job["task_id"]; cfg = norm_cfg(job.get("config") or {})
+
+                    def stopped():
+                        try:
+                            return bool(call("/api/agent/task_state", dict(task_id=tid, agent=name)).get("stop"))
+                        except Exception:  # noqa  (portal unreachable during a failover: keep going)
+                            return False
+                    try:
+                        res = dict(ok=True, result=run_task(job["task"], cfg, stopped))
+                    except Exception as e:  # noqa
+                        res = dict(ok=False, error=f"{e.__class__.__name__}: {e}")
+                    for _ in range(60):
+                        try:
+                            call("/api/agent/task_result", dict(task_id=tid, agent=name, **res)); break
+                        except Exception:  # noqa
+                            time.sleep(10)
+                threading.Thread(target=do_task, daemon=True).start()
+                continue
             if not job.get("run_id"):
                 continue
             cfg = norm_cfg(job.get("config") or {}); install_inspection_ca(cfg["inspection_ca_pem"])

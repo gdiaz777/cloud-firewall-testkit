@@ -14,10 +14,21 @@ arquitectura.
 
 ## Qué prueba
 
-**186 comprobaciones automáticas en 45 casos** de 8 dominios: arquitectura y enrutamiento, políticas y segmentación,
-prevención de intrusiones, malware, **inspección TLS** (incluida la evasión sobre HTTPS), control de aplicaciones y
-URL, DLP y cobertura de ataques web. Solo estímulos inocuos (EICAR, patrones de ataque contra un servidor no
-vulnerable, datos sintéticos). Ver el [catálogo de pruebas](docs/es/catalogo-pruebas.md).
+**117 casos de prueba en 14 dominios**: arquitectura y enrutamiento, políticas y segmentación, prevención de
+intrusiones, malware, **inspección TLS** (incluida la evasión sobre HTTPS), control de aplicaciones y URL, DLP,
+cobertura de ataques web, visibilidad y auditoría, **alta disponibilidad**, **rendimiento**, operación,
+integraciones y coste.
+
+- **69 casos automáticos (222 comprobaciones)**: desde los clientes (tráfico a través de la solución) y, para alta
+  disponibilidad, registros, política y operación, desde un **agente de control** opcional en un equipo de
+  administración (API de la nube y de la gestión; provoca la caída de gateways mientras todos los clientes sondean).
+- **48 casos manuales**: procedimiento guiado, resultado esperado y evidencias (consolas, integraciones, costes), en el
+  portal y en el informe.
+
+Solo se usan estímulos inocuos (EICAR, patrones de ataque contra un servidor no vulnerable, datos sintéticos). Ver el
+[catálogo de pruebas](docs/es/catalogo-pruebas.md). Lo que debe tener configurado el firewall está en la pestaña
+**Configuración del firewall** del portal y en cada caso (neutral; si la solución probada es Check Point se muestran
+además sus buenas prácticas).
 
 ## Puesta en marcha
 
@@ -48,6 +59,13 @@ HTTP (tcp/80) a través de la solución; el servidor genera su propia CA de prue
 
 Por consola en un cliente (sin portal): `docker exec testkit-client fw-tests run IPS-01 TLS-05`.
 Incluye un `docker-compose.yml` con ambos perfiles.
+
+## Opcional: agente de control (HA, registros, política, operación)
+
+Algunas pruebas no se pueden hacer desde un workload: terminar o aislar un gateway, escalar el grupo, leer los
+registros del firewall o medir un cambio de política de extremo a extremo. Las ejecuta un **agente de control** en un
+equipo de administración con credenciales de la nube y de la gestión, que aparece en el portal como un cliente más
+(`CONTROL`). Sin él, esas pruebas salen como *no aplica*. Ver [docs/es/agente-control.md](docs/es/agente-control.md).
 
 ## Comparar soluciones
 

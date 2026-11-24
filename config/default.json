@@ -28,7 +28,8 @@
     "port_test_host": "portquiz.net",
     "dns_resolver": "1.1.1.1",
     "exception_port": 5201,
-    "c2_test_url": "http://sc1.checkpoint.com/za/images/threatwiki/pages/TestAntiBotBlade.html"
+    "c2_test_url": "http://sc1.checkpoint.com/za/images/threatwiki/pages/TestAntiBotBlade.html",
+    "ioc_test_domain": "ioc-test.testkit.invalid"
   },
   "internal_cidr": "10.0.0.0/8",
   "inspection_ca_match": "",

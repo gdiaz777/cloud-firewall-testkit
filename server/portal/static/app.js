@@ -6,7 +6,11 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<
 
 const I18N = {
   en: {
-    kicker: "Security validation", title: "Firewall Testkit", tab_tests: "Tests", tab_settings: "Settings",
+    kicker: "Security validation", title: "Firewall Testkit", tab_tests: "Tests", tab_settings: "Settings", tab_fwconfig: "Firewall configuration",
+    manual: "Manual", control: "control agent", scope: "needs extra infrastructure", procedure: "Procedure", expected_res: "Expected result", bp: "Check Point best practices",
+    fw_title: "Firewall configuration for the tests", fw_intro: "What the firewall under test must have configured so that the automated checks are meaningful. Vendor-neutral: apply it with the tools of each solution. Each case also lists its own prerequisites.",
+    fw_cp: "Check Point: recommended baseline", fw_cp_intro: "Configuration best practices for Check Point CloudGuard Network / Cloud Firewall. The kit's checkpoint/ folder applies the testkit baseline through the Management API.",
+    fw_cases: "Prerequisites per case", fw_manual: "Manual cases", fw_manual_intro: "Cases that are validated by following a procedure (console, cloud, integrations). Open them in the Tests tab to see the steps.",
     sol_none: "no solution configured (Settings)", compare: "Compare selected", compare_es: "ES", compare_help: "Tick two or more runs to compare solutions.",
     set_solution: "Solution under test", set_solution_help: "Name shown in reports and used to label runs (e.g. vendor and product). Change it before testing another solution.",
     sol_name: "Solution name", sol_vendor: "Vendor", vendor_cp: "Check Point", vendor_other: "Other",
@@ -15,7 +19,7 @@ const I18N = {
     set_ca: "TLS inspection CA", set_ca_help: "Public certificate (PEM) of the CA the solution uses to re-sign inspected TLS. Clients add it to their trust store; it also tells the checks which certificates were decrypted.",
     clients: "Clients", no_clients: "Waiting for clients…", search: "Search case or check (e.g. TLS, EICAR, IPS-06)", run_sel: "Run selection",
     run_all: "Run all", runs: "Runs", runs_help: "Pick one to see its results next to each check. When it finishes, download the Word report.",
-    selected: (n) => `${n} checks selected`, run_case: "Run case", objective: "Objective", requires: "Policy prerequisites", how: "Check Point notes",
+    selected: (n) => `${n} checks selected`, run_case: "Run case", objective: "Objective", requires: "Firewall configuration needed", how: "Check Point notes",
     evidence: "Evidence", test: "Check", expected: "Expected", result: "Result", informative: "informative", ready: "ready", busy: "busy", offline: "offline",
     no_runs: "No runs yet.", finished: "finished", running: "running", report_en: "Report EN", report_es: "Report ES", fail: "failed", info: "info", na: "n/a",
     no_match: "No case matches the search.", no_agent: "No connected client is selected.",
@@ -32,15 +36,19 @@ const I18N = {
     ST: { OK: "OK", FAIL: "FAIL", ERROR: "ERROR", INFO: "INFO", SKIP: "N/A" },
     ROLES: { prod_envs: "Production environments (NET-07)", nonprod_envs: "Non-production environments (NET-07)", ids_target: "Target with Detect (IDS) profile (POL-15, IPS-11)",
       ids_clients: "Clients that run the IDS vs IPS comparison", ips_exception_client: "Asset with the IPS exception (IPS-04)", dlp_exception_client: "Asset with the DLP exception (DLP-02)",
-      precedence_target: "Blocked target for rule precedence (POL-10)", precedence_clients: "Clients for rule precedence (POL-10)" },
+      precedence_target: "Blocked target for rule precedence (POL-10)", precedence_clients: "Clients for rule precedence (POL-10)", perf_client: "Client that runs the performance measurements (PERF-*)" },
     NET: { allowed_site: "Allowed site (shares IP with the blocked FQDN)", allowed_business_site: "Allowed business site", blocked_fqdn: "Blocked FQDN (POL-05)",
       blocked_path: "Blocked path on the allowed site (APP-03)", geo_blocked_url: "URL in a geo-blocked country (IPS-08)", financial_site: "Financial site bypassed from HTTPS Inspection (TLS-05)",
       inspected_site: "Site that must be decrypted (TLS-02/05)", port_test_host: "Host answering on any TCP port", dns_resolver: "Public DNS resolver", exception_port: "Exception port between environments (POL-02)",
       c2_test_url: "Vendor C&C test URL (IPS-09, THR-05)", geo_blocked_countries: "Blocked countries (comma separated)", internal_cidr: "Internal range (summary)",
-      inspection_ca_match: "Text in the TLS inspection CA name (empty = from the PEM)" },
+      ioc_test_domain: "Test domain for the IoC reaction (IPS-10)", inspection_ca_match: "Text in the TLS inspection CA name (empty = from the PEM)" },
   },
   es: {
-    kicker: "Validación de seguridad", title: "Firewall Testkit", tab_tests: "Pruebas", tab_settings: "Configuración",
+    kicker: "Validación de seguridad", title: "Firewall Testkit", tab_tests: "Pruebas", tab_settings: "Configuración", tab_fwconfig: "Configuración del firewall",
+    manual: "Manual", control: "agente de control", scope: "requiere infraestructura adicional", procedure: "Procedimiento", expected_res: "Resultado esperado", bp: "Buenas prácticas de Check Point",
+    fw_title: "Configuración del firewall para las pruebas", fw_intro: "Lo que debe tener configurado el firewall probado para que las comprobaciones automáticas tengan sentido. Es neutral respecto al fabricante: aplícalo con las herramientas de cada solución. Cada caso indica además sus propios requisitos.",
+    fw_cp: "Check Point: configuración base recomendada", fw_cp_intro: "Buenas prácticas de configuración de Check Point CloudGuard Network / Cloud Firewall. La carpeta checkpoint/ del kit aplica la configuración de pruebas por la API de gestión.",
+    fw_cases: "Requisitos por caso", fw_manual: "Casos manuales", fw_manual_intro: "Casos que se validan siguiendo un procedimiento (consola, nube, integraciones). Ábrelos en la pestaña Pruebas para ver los pasos.",
     sol_none: "sin solución configurada (Configuración)", compare: "Comparar seleccionadas", compare_es: "ES", compare_help: "Marca dos o más ejecuciones para comparar soluciones.",
     set_solution: "Solución probada", set_solution_help: "Nombre que aparece en los informes y etiqueta las ejecuciones (p. ej. fabricante y producto). Cámbialo antes de probar otra solución.",
     sol_name: "Nombre de la solución", sol_vendor: "Fabricante", vendor_cp: "Check Point", vendor_other: "Otro",
@@ -49,7 +57,7 @@ const I18N = {
     set_ca: "CA de inspección TLS", set_ca_help: "Certificado público (PEM) de la CA con la que la solución re-firma el TLS inspeccionado. Los clientes la añaden a su almacén de confianza y sirve para saber qué certificados se descifraron.",
     clients: "Clientes", no_clients: "Esperando clientes…", search: "Buscar caso o prueba (p. ej. TLS, EICAR, IPS-06)", run_sel: "Ejecutar selección",
     run_all: "Ejecutar todo", runs: "Ejecuciones", runs_help: "Elige una para ver sus resultados junto a cada prueba. Al terminar, descarga el informe en Word.",
-    selected: (n) => `${n} pruebas seleccionadas`, run_case: "Ejecutar caso", objective: "Objetivo", requires: "Requisitos de política", how: "Notas de Check Point",
+    selected: (n) => `${n} pruebas seleccionadas`, run_case: "Ejecutar caso", objective: "Objetivo", requires: "Configuración necesaria en el firewall", how: "Notas de Check Point",
     evidence: "Evidencias", test: "Prueba", expected: "Esperado", result: "Resultado", informative: "informativa", ready: "listo", busy: "ocupado", offline: "sin conexión",
     no_runs: "Todavía no hay ejecuciones.", finished: "terminada", running: "en curso", report_en: "Informe EN", report_es: "Informe ES", fail: "fallo", info: "info", na: "n/a",
     no_match: "Ningún caso coincide con la búsqueda.", no_agent: "No hay ningún cliente conectado y seleccionado.",
@@ -66,12 +74,12 @@ const I18N = {
     ST: { OK: "OK", FAIL: "FALLO", ERROR: "ERROR", INFO: "INFO", SKIP: "N/A" },
     ROLES: { prod_envs: "Entornos de producción (NET-07)", nonprod_envs: "Entornos no productivos (NET-07)", ids_target: "Destino con perfil Detect/IDS (POL-15, IPS-11)",
       ids_clients: "Clientes que comparan IDS frente a IPS", ips_exception_client: "Activo con la excepción IPS (IPS-04)", dlp_exception_client: "Activo con la excepción DLP (DLP-02)",
-      precedence_target: "Destino bloqueado para la precedencia (POL-10)", precedence_clients: "Clientes para la precedencia (POL-10)" },
+      precedence_target: "Destino bloqueado para la precedencia (POL-10)", precedence_clients: "Clientes para la precedencia (POL-10)", perf_client: "Cliente que lanza las medidas de rendimiento (PERF-*)" },
     NET: { allowed_site: "Sitio permitido (comparte IP con el FQDN bloqueado)", allowed_business_site: "Sitio corporativo permitido", blocked_fqdn: "FQDN bloqueado (POL-05)",
       blocked_path: "Ruta bloqueada en el sitio permitido (APP-03)", geo_blocked_url: "URL en un país bloqueado (IPS-08)", financial_site: "Sitio financiero excluido de HTTPS Inspection (TLS-05)",
       inspected_site: "Sitio que debe descifrarse (TLS-02/05)", port_test_host: "Host que responde en cualquier puerto TCP", dns_resolver: "Resolvedor DNS público", exception_port: "Puerto de excepción entre entornos (POL-02)",
       c2_test_url: "URL de prueba de C&C del fabricante (IPS-09, THR-05)", geo_blocked_countries: "Países bloqueados (separados por comas)", internal_cidr: "Rango interno (resumen)",
-      inspection_ca_match: "Texto del nombre de la CA de inspección (vacío = del PEM)" },
+      ioc_test_domain: "Dominio de prueba para la reacción a IoC (IPS-10)", inspection_ca_match: "Texto del nombre de la CA de inspección (vacío = del PEM)" },
   },
 };
 const MULTI_ROLES = ["prod_envs", "nonprod_envs", "ids_clients", "precedence_clients"];
@@ -96,12 +104,14 @@ function applyLang() {
   $$(".lang button").forEach((b) => b.classList.toggle("on", b.dataset.lang === LANG));
   if (CAT) { render(); pollRuns(); pollAgents(); }
   if (CONF && !$("#view-settings").hidden) renderSettings();
+  if (CAT && !$("#view-fwconfig").hidden) renderFw();
 }
 $$(".lang button").forEach((b) => (b.onclick = () => { LANG = b.dataset.lang; try { localStorage.setItem("tk-lang", LANG); } catch {} applyLang(); }));
 $$(".tab").forEach((b) => (b.onclick = () => {
   $$(".tab").forEach((x) => x.classList.toggle("on", x === b));
-  $("#view-tests").hidden = b.dataset.tab !== "tests"; $("#view-settings").hidden = b.dataset.tab !== "settings";
+  $("#view-tests").hidden = b.dataset.tab !== "tests"; $("#view-settings").hidden = b.dataset.tab !== "settings"; $("#view-fwconfig").hidden = b.dataset.tab !== "fwconfig";
   if (b.dataset.tab === "settings") loadSettings();
+  if (b.dataset.tab === "fwconfig") renderFw();
 }));
 
 // ------------------------------------------------------------------ tests view
@@ -121,7 +131,7 @@ function render() {
   box.innerHTML = ""; toc.innerHTML = "";
   for (const d of CAT.domains) {
     const cs = cases.filter((c) => c.domain === d.id); if (!cs.length) continue;
-    toc.insertAdjacentHTML("beforeend", `<a href="#d-${d.id}">${esc(d.id)} · ${esc(tr(d.name))}<span>${cs.reduce((a, c) => a + c.checks.length, 0)}</span></a>`);
+    toc.insertAdjacentHTML("beforeend", `<a href="#d-${d.id}">${esc(d.id)} · ${esc(tr(d.name))}<span>${cs.length}</span></a>`);
     box.insertAdjacentHTML("beforeend", `<h2 class="dom" id="d-${d.id}">${esc(d.id)} · ${esc(tr(d.name))}</h2>`);
     cs.forEach((c) => box.appendChild(caseEl(c)));
   }
@@ -133,15 +143,22 @@ function caseEl(c) {
   const el = $("#tpl-case").content.firstElementChild.cloneNode(true);
   el.dataset.case = c.id;
   $(".cid", el).textContent = c.id; $("h3", el).textContent = tr(c.title);
-  $(".badges", el).innerHTML = `<span class="b ${c.priority}">${esc(tr(c.priority_label))}</span>`;
+  const manual = c.mode === "manual", ctl = c.checks.some((k) => k.runner === "control");
+  $(".badges", el).innerHTML = (c.scope ? `<span class="b scope">${t("scope")}</span>` : "") + (manual ? `<span class="b manual">${t("manual")}</span>` : "") +
+    (ctl ? `<span class="b ctl">${t("control")}</span>` : "") + `<span class="b ${c.priority}">${esc(tr(c.priority_label))}</span>`;
   $(".h-obj", el).textContent = t("objective"); $(".obj", el).textContent = tr(c.objective);
   $(".h-req", el).textContent = t("requires"); $(".req", el).textContent = tr(c.requires);
   const notes = isCP() && c.vendor_notes && c.vendor_notes.checkpoint;
   $(".h-how", el).textContent = notes ? t("how") : ""; $(".how", el).textContent = notes ? tr(c.vendor_notes.checkpoint) : "";
   $(".evi", el).textContent = t("evidence") + ": " + tr(c.evidence);
+  const bp = isCP() && c.bp_checkpoint; $(".h-bp", el).textContent = bp ? t("bp") : ""; $(".bp", el).textContent = bp ? tr(c.bp_checkpoint) : "";
+  if (manual) {
+    $(".manual", el).classList.add("on"); $(".h-proc", el).textContent = t("procedure"); $(".h-expd", el).textContent = t("expected_res");
+    $(".steps", el).innerHTML = (c.procedure || []).map((s) => `<li>${esc(tr(s))}</li>`).join(""); $(".expd", el).textContent = tr(c.expected);
+  }
   $(".th-test", el).textContent = t("test"); $(".th-exp", el).textContent = t("expected"); $(".th-res", el).textContent = t("result");
   const ck = $(".case-ck", el), rc = $(".run-case", el);
-  rc.textContent = t("run_case");
+  rc.textContent = t("run_case"); if (manual) { rc.hidden = true; ck.parentElement.style.visibility = "hidden"; }
   ck.checked = c.checks.every((k) => sel.has(k.id));
   ck.onclick = (e) => { e.stopPropagation(); c.checks.forEach((k) => (ck.checked ? sel.add(k.id) : sel.delete(k.id))); $$(".chk", el).forEach((x) => (x.checked = ck.checked)); updateSel(); };
   rc.onclick = (e) => { e.stopPropagation(); launch([c.id], `${c.id} ${tr(c.title)}`); };
@@ -149,13 +166,22 @@ function caseEl(c) {
   for (const k of c.checks) {
     const row = document.createElement("tr"); row.dataset.check = k.id;
     row.innerHTML = `<td><input type="checkbox" class="chk" ${sel.has(k.id) ? "checked" : ""}></td>
-      <td class="n"><b>${esc(k.id)}</b> ${esc(tr(k.name))} ${k.informative ? `<span class="b">${t("informative")}</span>` : ""}<div class="ex">${esc(tr(k.explain))}</div><div class="bl">${esc(k.blade)}</div></td>
+      <td class="n"><b>${esc(k.id)}</b> ${esc(tr(k.name))} ${k.informative ? `<span class="b">${t("informative")}</span>` : ""}${k.runner === "control" ? ` <span class="b ctl">${t("control")}</span>` : ""}<div class="ex">${esc(tr(k.explain))}</div><div class="bl">${esc(k.blade)}</div></td>
       <td>${esc(t("EXP")[k.expect] || k.expect)}</td><td class="res"><span class="muted small">—</span></td><td><button class="btn sm">▶</button></td>`;
     $(".chk", row).onchange = (e) => { e.target.checked ? sel.add(k.id) : sel.delete(k.id); updateSel(); };
     $("button", row).onclick = () => launch([k.id], `${k.id} ${tr(k.name)}`);
     $("tbody", el).appendChild(row);
   }
   return el;
+}
+
+function renderFw() {
+  const g = CAT.config_guide || {}, li = (xs) => `<ol>${(xs || []).map((x) => `<li>${esc(tr(x))}</li>`).join("")}</ol>`;
+  const auto = CAT.cases.filter((c) => c.mode !== "manual"), man = CAT.cases.filter((c) => c.mode === "manual");
+  $("#fwconfig").innerHTML = `<section class="card fwc"><h2>${t("fw_title")}</h2><p class="muted small">${t("fw_intro")}</p>${li(g.firewall)}</section>` +
+    (isCP() ? `<section class="card fwc"><h2>${t("fw_cp")}</h2><p class="muted small">${t("fw_cp_intro")}</p>${li(g.checkpoint)}</section>` : "") +
+    `<section class="card fwc"><h2>${t("fw_cases")}</h2><table><tbody>${auto.map((c) => `<tr><td><b class="cid">${esc(c.id)}</b></td><td>${esc(tr(c.title))}</td><td>${esc(tr(c.requires))}${isCP() && c.bp_checkpoint ? `<div class="bp">${esc(tr(c.bp_checkpoint))}</div>` : ""}</td></tr>`).join("")}</tbody></table></section>` +
+    `<section class="card fwc"><h2>${t("fw_manual")} (${man.length})</h2><p class="muted small">${t("fw_manual_intro")}</p><table><tbody>${man.map((c) => `<tr><td><b class="cid">${esc(c.id)}</b></td><td>${esc(tr(c.title))}${c.scope ? ` <span class="b scope">${t("scope")}</span>` : ""}</td><td>${esc(tr(c.requires))}</td></tr>`).join("")}</tbody></table></section>`;
 }
 
 function updateSel() { $("#selinfo").textContent = sel.size ? t("selected")(sel.size) : ""; $("#runsel").disabled = !sel.size; }

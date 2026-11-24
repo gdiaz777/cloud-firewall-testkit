@@ -13,10 +13,20 @@ server, every test crosses the security solution, and the portal produces the re
 
 ## What it tests
 
-**186 automated checks in 45 test cases** across 8 domains: architecture and routing, policy and segmentation,
-intrusion prevention, malware, **TLS inspection** (including evasion over HTTPS), application/URL control, DLP and web
-attack coverage. Only harmless stimuli are used (EICAR, attack patterns against a non-vulnerable server, synthetic
-data). See the [test catalog](docs/en/test-catalog.md).
+**117 test cases in 14 domains**: architecture and routing, policy and segmentation, intrusion prevention, malware,
+**TLS inspection** (including evasion over HTTPS), application/URL control, DLP, web attack coverage, visibility and
+audit, **high availability**, **performance**, operations, integrations and cost.
+
+- **69 automated cases (222 checks)**: run from the clients (traffic through the solution) and, for high availability,
+  logs, policy and operations, from an optional **control agent** on an admin host (cloud and management APIs; it
+  fails over gateways while every client probes continuously).
+- **48 manual cases**: guided procedure, expected result and evidence (consoles, integrations, costs), in the portal and
+  in the report.
+
+Only harmless stimuli are used (EICAR, attack patterns against a non-vulnerable server, synthetic data). See the
+[test catalog](docs/en/test-catalog.md). What the firewall must have configured for the tests is in the portal tab
+**Firewall configuration** and in every case (vendor-neutral; Check Point best practices are shown when the solution
+under test is Check Point).
 
 ## Quick start
 
@@ -47,6 +57,13 @@ over HTTP (tcp/80) through the solution; the server generates its own test CA an
 
 Command line on a client (no portal needed): `docker exec testkit-client fw-tests run IPS-01 TLS-05`.
 A `docker-compose.yml` with both profiles is included.
+
+## Optional: control agent (HA, logs, policy, operations)
+
+Some checks cannot be done from a workload: terminating or isolating a gateway, scaling the group, reading the
+firewall logs, measuring a policy change end to end. They run in a **control agent** on an admin host with cloud
+and management credentials; it registers in the portal as one more client (`CONTROL`). Without it those checks are
+reported as *not applicable*. See [docs/en/control-agent.md](docs/en/control-agent.md).
 
 ## Comparing solutions
 
@@ -85,9 +102,10 @@ See [docs/en/checkpoint-baseline.md](docs/en/checkpoint-baseline.md) and the [Ch
 
 ```
 catalog/     catalog.py, tests.json, gen_docs.py
-client/      runner.py (checks, agent, CLI)
+client/      runner.py (checks, agent, CLI, tasks requested by the control agent)
+control/     control agent (agent.py) and cloud hooks (aws_hooks.py)
 server/      nginx, content, portal (Flask + JS), report (docx + matplotlib), comparison report
-checkpoint/  optional Check Point baseline (Management API)
+checkpoint/  optional Check Point baseline (Management API) and Check Point hooks of the control agent
 config/      default.json, config.example.json (4-environment example)
 docs/        en/, es/, img/
 ```

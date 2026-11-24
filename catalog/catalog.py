@@ -34,6 +34,12 @@ DOMAINS = [
     ("APP", T("Control L7 y anomalías", "L7 control and anomalies")),
     ("DLP", T("Prevención de fuga de datos", "Data loss prevention")),
     ("WAF", T("Protección web complementaria", "Complementary web protection")),
+    ("OBS", T("Visibilidad y auditoría", "Visibility and audit")),
+    ("HA", T("Disponibilidad y resiliencia", "Availability and resilience")),
+    ("PERF", T("Rendimiento y capacidad", "Performance and capacity")),
+    ("OPS", T("Operación y gobierno", "Operations and governance")),
+    ("INT", T("Integraciones", "Integrations")),
+    ("COST", T("Coste y eficiencia", "Cost and efficiency")),
 ]
 
 S = "{SERVER}"
@@ -70,9 +76,14 @@ SEG_EXPL = T("Matriz de segmentación configurada: desde este entorno hacia los 
 C = []
 
 
-def case(id_, prio, title, objective, how, requires, evidence, checks):
+def case(id_, prio, title, objective, how, requires, evidence, checks, **kw):
     C.append(dict(id=id_, domain=id_.split("-")[0], priority=prio, title=title, objective=objective, how=how,
-                  requires=requires, evidence=evidence, checks=checks))
+                  requires=requires, evidence=evidence, checks=checks, mode=kw.pop("mode", "auto"), **kw))
+
+
+def hk(name, expect, hook_, explain, blade, **kw):
+    """Check run by the control agent (operator side: cloud and management APIs) through a hook."""
+    return dict(name=name, type="hook", runner="control", hook=hook_, expect=expect, explain=explain, blade=blade, **kw)
 
 
 EVI_STD = T("Resultados del portal (Word/CSV) y registros del firewall filtrados por IP de origen y hora.",
@@ -493,7 +504,11 @@ case("WAF-01", "medium", T("SQLi y XSS (cobertura de WAF)", "SQLi and XSS (WAF c
          http(T("Tautología SQL en JSON (API)", "SQL tautology in JSON (API)"), "BLOCK", "http://" + S + "/api/login", ["-H", "Content-Type: application/json", "--data", '{"user":"admin\' OR \'1\'=\'1\'--","pass":"x"}'], explain=T("Clase propia de un WAF: informativa.", "WAF-specific class: informative."), blade="IPS → CloudGuard WAF", informative=True, **SRV),
      ])
 
+exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "catalog_ops.py"), encoding="utf-8").read())
+
 # ------------------------------------------------------------------ build
+DORD = [d for d, _ in DOMAINS]
+C.sort(key=lambda c: (DORD.index(c["domain"]), int(c["id"].split("-")[1])))
 n = 0
 for c in C:
     for i, ch in enumerate(c["checks"], 1):
@@ -528,8 +543,8 @@ for c in C:
 PRIO = {"critical": T("Crítica", "Critical"), "high": T("Alta", "High"), "medium": T("Media", "Medium")}
 for c in C:
     c["priority_label"] = PRIO[c["priority"]]
-out = dict(version=2, title=T("Catálogo de pruebas de seguridad", "Security test catalog"),
-           domains=[dict(id=d, name=nm) for d, nm in DOMAINS], cases=C)
+out = dict(version=3, title=T("Catálogo de pruebas de seguridad", "Security test catalog"),
+           domains=[dict(id=d, name=nm) for d, nm in DOMAINS], cases=C, config_guide=CONFIG_GUIDE)
 with open(OUT, "w", encoding="utf-8") as f:
     json.dump(out, f, ensure_ascii=False, indent=1)
-print(f"{len(C)} cases, {n} checks → {OUT}")
+print(f"{len(C)} cases ({sum(c['mode'] == 'manual' for c in C)} manual), {n} checks ({sum(k.get('runner') == 'control' for c in C for k in c['checks'])} control) → {OUT}")

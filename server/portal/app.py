@@ -93,7 +93,7 @@ def static_files(p):
 
 @app.get("/api/catalog")
 def catalog():
-    return jsonify(dict(domains=CAT["domains"], cases=CAT["cases"], title=CAT["title"]))
+    return jsonify(dict(domains=CAT["domains"], cases=CAT["cases"], title=CAT["title"], config_guide=CAT.get("config_guide", {})))
 
 
 @app.get("/api/bootstrap")
@@ -280,6 +280,59 @@ def agent_result():
 def agent_done():
     b = dec(request.get_data()); n = touch(b, False)
     update_run(b["run_id"], lambda r: r["agents"][n].update(status="done", finished=now()))
+    return Response(enc({}), mimetype="application/octet-stream")
+
+
+# ------------------------------------------------------------------ tasks: the control agent asks traffic agents for probes
+# (continuous probes, long sessions, traffic for logs/IoC/load) while it fails over gateways or changes the policy.
+TASKS = {}           # id -> {agent, task, status: queued|running|done, stop, result, created}
+
+
+@app.post("/api/tasks")
+def new_task():
+    b = request.get_json(force=True)
+    n = b.get("agent")
+    with LOCK:
+        if n not in AGENTS:
+            return jsonify(error=f"unknown agent {n}"), 404
+        tid = uuid.uuid4().hex[:12]
+        TASKS[tid] = dict(agent=n, task=b["task"], status="queued", stop=False, result=None, created=time.time())
+        QUEUE.setdefault(n, []).append(dict(task_id=tid, task=b["task"], config=load_config()))
+        for k in [k for k, v in TASKS.items() if time.time() - v["created"] > 86400]:
+            TASKS.pop(k)
+    return jsonify(id=tid)
+
+
+@app.get("/api/tasks/<tid>")
+def get_task(tid):
+    t = TASKS.get(tid)
+    return (jsonify({k: v for k, v in t.items() if k != "task"}) if t else (jsonify(error="unknown task"), 404))
+
+
+@app.post("/api/tasks/<tid>/stop")
+def stop_task(tid):
+    if tid in TASKS:
+        TASKS[tid]["stop"] = True
+        with LOCK:   # still queued: drop it
+            q = QUEUE.get(TASKS[tid]["agent"]) or []
+            QUEUE[TASKS[tid]["agent"]] = [j for j in q if j.get("task_id") != tid]
+    return jsonify(ok=True)
+
+
+@app.post("/api/agent/task_state")
+def agent_task_state():
+    b = dec(request.get_data()); touch(b, True)
+    t = TASKS.get(b["task_id"]) or {}
+    if t.get("status") == "queued":
+        t["status"] = "running"
+    return Response(enc(dict(stop=bool(t.get("stop")))), mimetype="application/octet-stream")
+
+
+@app.post("/api/agent/task_result")
+def agent_task_result():
+    b = dec(request.get_data()); touch(b, False)
+    if b["task_id"] in TASKS:
+        TASKS[b["task_id"]].update(status="done", result=b.get("result"), error=b.get("error"), ok=b.get("ok"))
     return Response(enc({}), mimetype="application/octet-stream")
 
 

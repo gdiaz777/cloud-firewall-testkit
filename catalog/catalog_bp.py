@@ -1,0 +1,106 @@
+# Included by catalog_manual.py. Firewall configuration the kit needs (vendor-neutral) and Check Point best practices
+# (shown only when the solution under test is Check Point).
+
+FW_CONFIG = [
+    T("Arquitectura: todo el tráfico entre entornos y hacia Internet pasa por el firewall (Transit Gateway con appliance mode en el attachment de inspección y endpoints del balanceador del firewall). Sin rutas alternativas (NET-06).",
+      "Architecture: all traffic between environments and to the Internet crosses the firewall (Transit Gateway with appliance mode on the inspection attachment and firewall load balancer endpoints). No alternative routes (NET-06)."),
+    T("Objetos: un objeto de red por entorno (CIDR de la configuración del portal) y un grupo con todos ellos; un objeto con el rango interno.",
+      "Objects: one network object per environment (CIDR from the portal settings) and a group with all of them; one object with the internal range."),
+    T("Segmentación: una regla Accept por cada par origen→destino de la matriz con sus servicios, una regla Drop con registro para el resto entre entornos y regla de limpieza Drop con registro.",
+      "Segmentation: one Accept rule per source→destination pair of the matrix with its services, a logged Drop for the rest between environments and a logged Drop cleanup rule."),
+    T("Puerto de excepción (por defecto 5201, TCP y UDP): permitido entre todos los entornos y excluido de la prevención de amenazas (POL-02 y medidas de rendimiento PERF-01/06/07).",
+      "Exception port (5201 by default, TCP and UDP): allowed between all environments and excluded from threat prevention (POL-02 and performance measurements PERF-01/06/07)."),
+    T("Salida a Internet: solo HTTP/HTTPS identificados por protocolo y DNS; control de aplicaciones y URL (categorías de riesgo, FQDN y ruta bloqueados de la configuración), geobloqueo de los países configurados y anti-bot.",
+      "Internet egress: only HTTP/HTTPS identified by protocol and DNS; application and URL control (risk categories, blocked FQDN and path from the settings), geo-blocking of the configured countries and anti-bot."),
+    T("Prevención de amenazas en Prevent: IPS, anti-malware (ambos sentidos y dentro de comprimidos) y anti-bot; un perfil este-oeste, uno de Internet y uno en Detect para el entorno «ids_target»; una excepción IPS para el activo «ips_exception_client».",
+      "Threat prevention in Prevent: IPS, anti-malware (both directions and inside archives) and anti-bot; an east-west profile, an Internet profile and a Detect profile for the «ids_target» environment; one IPS exception for the «ips_exception_client» asset."),
+    T("DLP: bloqueo de tarjetas, IBAN y ejecutables entre entornos (HTTP y HTTPS), con una excepción de subida para el activo «dlp_exception_client».",
+      "DLP: block card numbers, IBAN and executables between environments (HTTP and HTTPS), with an upload exception for the «dlp_exception_client» asset."),
+    T("Inspección TLS: descifrado saliente y este-oeste con la CA de inspección (su PEM se carga en el portal); la CA del kit como CA de confianza; exclusión de descifrado para el FQDN mTLS/pinning, la lista del fabricante y categorías sensibles (financiero, salud, gobierno); validación del certificado del servidor.",
+      "TLS inspection: outbound and east-west decryption with the inspection CA (its PEM is loaded in the portal); the kit CA as trusted CA; decryption bypass for the mTLS/pinning FQDN, the vendor list and sensitive categories (financial, health, government); server certificate validation."),
+    T("Registro: todas las reglas con registro (las de amenazas con captura de paquetes); hora sincronizada por NTP.", "Logging: every rule logs (threat rules with packet capture); time synchronized with NTP."),
+    T("Agente de control: clave de API de gestión (lectura, publicar e instalar solo en los gateways de prueba; crea objetos temporales TK_ que elimina) y rol de nube para leer el despliegue y ejecutar las pruebas de HA (grupo de autoescalado, ACL de red, CloudWatch, IAM de lectura).",
+      "Control agent: Management API key (read, publish and install only on the test gateways; it creates temporary TK_ objects and removes them) and a cloud role to read the deployment and run the HA checks (Auto Scaling group, network ACLs, CloudWatch, IAM read)."),
+]
+
+CP_BASELINE = [
+    T("Perfil de amenazas basado en «Optimized» (o «Strict» en la salida a Internet) en Prevent, con IPS, Anti-Bot, Anti-Virus, Threat Emulation y Threat Extraction; las protecciones nuevas en Prevent según confianza y rendimiento.",
+      "Threat profile based on «Optimized» (or «Strict» on Internet egress) in Prevent with IPS, Anti-Bot, Anti-Virus, Threat Emulation and Threat Extraction; new protections in Prevent by confidence and performance impact."),
+    T("Autonomous Threat Prevention o actualizaciones automáticas de IPS y de ThreatCloud; revisar THR-06 tras cada alta de gateway.", "Autonomous Threat Prevention or automatic IPS and ThreatCloud updates; check THR-06 after every new gateway."),
+    T("Inspección HTTPS saliente con la CA corporativa distribuida por GPO/MDM, bypass del objeto actualizable «HTTPS services - recommended bypass» (sk163595) y de categorías sensibles; validación del certificado del servidor y bloqueo de certificados no válidos.",
+      "Outbound HTTPS Inspection with the corporate CA distributed by GPO/MDM, bypass of the «HTTPS services - recommended bypass» updatable object (sk163595) and sensitive categories; server certificate validation and block of invalid certificates."),
+    T("Capas ordenadas en secciones (excepciones, matriz, salida, limpieza), sin reglas Accept con «Any» en servicio o destino, regla de limpieza Drop con registro y objetos dinámicos/actualizables en lugar de IP fijas.",
+      "Layers organized in sections (exceptions, matrix, egress, cleanup), no Accept rules with «Any» as service or destination, logged Drop cleanup rule and dynamic/updatable objects instead of fixed IPs."),
+    T("Servicios con «match by protocol signature» para HTTP/HTTPS en la salida (bloquea túneles en puertos web).", "Services with «match by protocol signature» for HTTP/HTTPS on egress (blocks tunnels over web ports)."),
+    T("Geo Policy / objetos actualizables de países en la salida y en el ingress publicado.", "Geo Policy / country updatable objects on egress and published ingress."),
+    T("Alta disponibilidad: grupo de autoescalado en al menos 2 AZ con mínimo n+1, GWLB con cross-zone activado, appliance mode en el TGW y CME con plantilla y política asignadas.",
+      "High availability: Auto Scaling group in at least 2 AZs with an n+1 minimum, GWLB with cross-zone enabled, appliance mode on the TGW and CME with template and policy assigned."),
+    T("Rendimiento: instancias de la familia c5/c6i/c7i dimensionadas con PERF-02 (perfil real), SecureXL y CoreXL activos (por defecto) y Dynamic Balancing.",
+      "Performance: c5/c6i/c7i instances sized with PERF-02 (real profile), SecureXL and CoreXL enabled (default) and Dynamic Balancing."),
+    T("Gestión: Smart-1 Cloud con SSO+MFA, una clave API por automatización, sesiones con aprobación para cambios y política como código (Terraform/API).",
+      "Management: Smart-1 Cloud with SSO+MFA, one API key per automation, approval sessions for changes and policy as code (Terraform/API)."),
+    T("Bastionado de gateways: IMDSv2, volúmenes cifrados, acceso administrativo solo desde la gestión y rangos autorizados, y conector de nube con rol STS de solo lectura con ExternalId.",
+      "Gateway hardening: IMDSv2, encrypted volumes, administrative access only from the management and authorized ranges, and cloud connector with a read-only STS role with ExternalId."),
+    T("Registros: Log Exporter hacia el SIEM, retención según normativa y Infinity Events/SmartEvent para correlación.", "Logs: Log Exporter to the SIEM, retention per regulation and Infinity Events/SmartEvent for correlation."),
+]
+
+BP_DOMAIN = {
+    "NET": T("GWLB con appliance mode en el attachment de inspección del TGW y cross-zone activado; MTU de las instancias compatible con GENEVE (8500 en la VPC del firewall).",
+             "GWLB with appliance mode on the TGW inspection attachment and cross-zone enabled; instance MTU compatible with GENEVE (8500 in the firewall VPC)."),
+    "POL": T("Capas en secciones, objetos dinámicos (CloudGuard Controller) en lugar de IP, reglas con registro y caducidad para las excepciones.",
+             "Layers in sections, dynamic objects (CloudGuard Controller) instead of IPs, logged rules and expiry for exceptions."),
+    "IPS": T("Perfil Optimized/Strict en Prevent, actualizaciones automáticas, excepciones acotadas por activo y protección (nunca globales) y Inactive solo para tecnologías inexistentes (p. ej. OT/SCADA por etiqueta).",
+             "Optimized/Strict profile in Prevent, automatic updates, exceptions scoped by asset and protection (never global) and Inactive only for absent technologies (e.g. OT/SCADA by tag)."),
+    "THR": T("Anti-Virus en ambos sentidos con inspección de comprimidos, Threat Emulation + Threat Extraction para documentos y Anti-Bot en Prevent.",
+             "Anti-Virus in both directions with archive inspection, Threat Emulation + Threat Extraction for documents and Anti-Bot in Prevent."),
+    "TLS": T("Inspección HTTPS con capa propia, bypass por objeto actualizable recomendado (sk163595) y categorías sensibles, TLS 1.3 y validación de certificados.",
+             "HTTPS Inspection with its own layer, bypass by the recommended updatable object (sk163595) and sensitive categories, TLS 1.3 and certificate validation."),
+    "APP": T("Capa en línea de salida con Application Control y URL Filtering, categorías de alto riesgo bloqueadas y servicios con firma de protocolo.",
+             "Inline egress layer with Application Control and URL Filtering, high-risk categories blocked and services matched by protocol signature."),
+    "DLP": T("Content Awareness en la capa de red con tipos de datos predefinidos (PCI, IBAN) y excepciones por activo y sentido.", "Content Awareness on the network layer with predefined data types (PCI, IBAN) and exceptions by asset and direction."),
+    "WAF": T("IPS para la red; aplicaciones web y API publicadas detrás de CloudGuard WAF.", "IPS for the network; published web apps and APIs behind CloudGuard WAF."),
+    "OBS": T("Registro en todas las reglas, Log Exporter al SIEM y SmartEvent/Infinity Events; captura de paquetes en las reglas de amenazas.", "Logging on every rule, Log Exporter to the SIEM and SmartEvent/Infinity Events; packet capture on threat rules."),
+    "HA": T("ASG en ≥ 2 AZ con mínimo n+1, GWLB cross-zone, CME con plantilla y política, y comprobación de actualizaciones (THR-06) en cada gateway nuevo.",
+            "ASG in ≥ 2 AZs with an n+1 minimum, GWLB cross-zone, CME with template and policy, and update check (THR-06) on every new gateway."),
+    "PERF": T("Dimensionar con el perfil real; instancias de cómputo optimizado; SecureXL/CoreXL y Dynamic Balancing activos; escalar por CPU.",
+              "Size with the real profile; compute-optimized instances; SecureXL/CoreXL and Dynamic Balancing enabled; scale on CPU."),
+    "OPS": T("Smart-1 Cloud con SSO+MFA, política como código y claves API por automatización con permisos mínimos.", "Smart-1 Cloud with SSO+MFA, policy as code and per-automation API keys with least privileges."),
+    "INT": T("IdP SAML en Infinity Portal y API de gestión para SOAR/ITSM.", "SAML IdP in Infinity Portal and Management API for SOAR/ITSM."),
+    "COST": T("PAYG para picos y BYOL para la base; bypass TLS de tráfico de confianza de alto volumen para ahorrar CPU.", "PAYG for peaks and BYOL for the baseline; TLS bypass of trusted high-volume traffic to save CPU."),
+}
+
+BP_CASE = {
+    "NET-01": T("Una regla por par de entornos y servicio; sin «Any» como servicio.", "One rule per environment pair and service; no «Any» as service."),
+    "NET-03": T("NAT centralizado en la VPC de salida; el firewall ve la IP real del workload.", "Centralized NAT in the egress VPC; the firewall sees the real workload IP."),
+    "NET-05": T("Appliance mode en el attachment de inspección (obligatorio para simetría entre AZ).", "Appliance mode on the inspection attachment (required for cross-AZ symmetry)."),
+    "NET-13": T("Jumbo frames en la VPC del firewall; MSS clamping si hay saltos con MTU 1500.", "Jumbo frames in the firewall VPC; MSS clamping where there are 1500-MTU hops."),
+    "POL-05": T("Objetos de dominio no comodín para FQDN concretos; Application Control/URL Filtering para categorías.", "Non-wildcard domain objects for specific FQDNs; Application Control/URL Filtering for categories."),
+    "POL-15": T("Detect solo temporal (periodo de aprendizaje) y por entorno; pasar a Prevent con fecha.", "Detect only temporarily (learning period) and per environment; move to Prevent on a set date."),
+    "IPS-01": T("Optimized/Strict en Prevent con «Protections activation» por severidad y confianza.", "Optimized/Strict in Prevent with «Protections activation» by severity and confidence."),
+    "IPS-04": T("Excepción por protección y activo concretos con caducidad; nunca desactivar la protección globalmente.", "Exception per specific protection and asset with expiry; never disable the protection globally."),
+    "IPS-06": T("Revisar semanalmente las protecciones nuevas en Detect y promoverlas a Prevent.", "Review new protections in Detect weekly and promote them to Prevent."),
+    "IPS-07": T("Mantener activas las protecciones de evasión TCP/IP y de fragmentación (Inspection Settings).", "Keep TCP/IP evasion and fragmentation protections enabled (Inspection Settings)."),
+    "IPS-08": T("Geo Policy o regla con objetos de país actualizables al principio de la capa de salida.", "Geo Policy or a rule with updatable country objects at the top of the egress layer."),
+    "THR-02": T("Sin descifrado el anti-malware solo ve el SNI: descifrar el tráfico de descarga.", "Without decryption anti-malware only sees the SNI: decrypt download traffic."),
+    "TLS-03": T("Bloquear certificados caducados, no confiables y revocados (validación del servidor en la capa HTTPS).", "Block expired, untrusted and revoked certificates (server validation in the HTTPS layer)."),
+    "TLS-06": T("Bloquear QUIC (UDP/443) para forzar HTTP/2 sobre TLS inspeccionable.", "Block QUIC (UDP/443) to force inspectable HTTP/2 over TLS."),
+    "TLS-08": T("Dimensionar la inspección TLS con PERF-02; bypass de categorías de confianza de alto volumen (actualizaciones del SO, backups).", "Size TLS inspection with PERF-02; bypass trusted high-volume categories (OS updates, backups)."),
+    "APP-02": T("Bloquear categorías de alto riesgo, anonimizadores y P2P; UserCheck para las de riesgo medio.", "Block high-risk categories, anonymizers and P2P; UserCheck for medium-risk ones."),
+    "DLP-01": T("Content Awareness en las reglas este-oeste y de salida, con HTTPS descifrado.", "Content Awareness on east-west and egress rules, with HTTPS decrypted."),
+    "OBS-01": T("Registro en todas las reglas; en reglas de mucho volumen, registro acumulado (accounting) en lugar de por conexión si el SIEM lo requiere.", "Logging on every rule; on high-volume rules use accounting if the SIEM requires it."),
+    "OBS-08": T("Alarmas de CloudWatch de CPU (escalado) y de destinos no sanos del GWLB; SNMPv3/monitorización de Gaia.", "CloudWatch alarms for CPU (scaling) and unhealthy GWLB targets; SNMPv3/Gaia monitoring."),
+    "HA-01": T("Mínimo n+1 por AZ y health check del GWLB en el puerto del gateway (8117).", "n+1 minimum per AZ and GWLB health check on the gateway port (8117)."),
+    "HA-02": T("Cross-zone activado en el GWLB para que una AZ sin gateways use los de la otra.", "Cross-zone enabled on the GWLB so an AZ without gateways uses the other AZ's."),
+    "HA-04": T("Las sesiones del gateway perdido se cortan (sin sincronización de estado en autoescalado): aplicaciones con reintento; «target failover rebalance» acelera el cambio de los flujos.",
+               "Sessions on the lost gateway are cut (no state sync in autoscaling): applications with retries; «target failover rebalance» speeds up flow failover."),
+    "HA-05": T("Política de escalado por CPU (p. ej. 70 %/30 %) y CME con la plantilla para que cada gateway nuevo reciba la política.", "CPU scaling policy (e.g. 70 %/30 %) and CME with the template so each new gateway gets the policy."),
+    "PERF-02": T("Medir con el perfil que se va a usar en producción; con TLS, dimensionar por la cifra descifrada.", "Measure with the production profile; with TLS, size by the decrypted figure."),
+    "OPS-01": T("Rol STS de solo lectura con ExternalId para CME/CloudGuard Controller; sin claves de acceso de larga duración.", "Read-only STS role with ExternalId for CME/CloudGuard Controller; no long-lived access keys."),
+    "OPS-03": T("Terraform provider de Check Point o API con publicación e instalación en el pipeline y revisión por pares.", "Check Point Terraform provider or API with publish and install in the pipeline and peer review."),
+}
+
+for c in C:
+    bp = BP_CASE.get(c["id"]) or BP_DOMAIN.get(c["id"].split("-")[0])
+    if bp:
+        c["bp_checkpoint"] = bp
+CONFIG_GUIDE = dict(firewall=FW_CONFIG, checkpoint=CP_BASELINE)

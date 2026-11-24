@@ -85,3 +85,8 @@ textarea{width:100%;font:12px ui-monospace,Consolas,monospace;border:1px solid v
 .cmpbar{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
 .btn.dis{opacity:.4;pointer-events:none}
 .run .t input{margin:0 4px 0 0}
+.b.manual{background:#e0f2fe;color:#075985}.b.ctl{background:#ede9fe;color:#5b21b6}.b.scope{background:#f3f4f6;color:#6b7280}
+.manual:not(.on){display:none}.manual{margin-top:8px;border-top:1px dashed var(--line);padding-top:8px}.manual ol{margin:4px 0 8px}
+.bp{background:#f5f3ff;border-left:3px solid #7c3aed;padding:6px 8px;border-radius:4px}.bp:empty{display:none}
+.fwc ol{margin:6px 0 0;padding-left:22px}.fwc li{margin-bottom:6px}
+.fwc table{width:100%;border-collapse:collapse;font-size:13px}.fwc td,.fwc th{border-bottom:1px solid #f1f2f4;padding:6px;text-align:left;vertical-align:top}

@@ -15,6 +15,7 @@
   </div>
   <nav class="tabs">
     <button class="tab on" data-tab="tests" data-i18n="tab_tests"></button>
+    <button class="tab" data-tab="fwconfig" data-i18n="tab_fwconfig"></button>
     <button class="tab" data-tab="settings" data-i18n="tab_settings"></button>
     <span class="lang"><button data-lang="en">EN</button><button data-lang="es">ES</button></span>
   </nav>
@@ -43,6 +44,10 @@
       <div id="cmpbar" class="cmpbar"></div>
     </aside>
   </main>
+</div>
+
+<div id="view-fwconfig" hidden>
+  <main class="settings" id="fwconfig"></main>
 </div>
 
 <div id="view-settings" hidden>
@@ -106,8 +111,9 @@
     <div class="body">
       <div class="cols">
         <div><h4 class="h-obj"></h4><p class="obj"></p><h4 class="h-req"></h4><p class="req"></p></div>
-        <div><h4 class="h-how"></h4><p class="how"></p><p class="evi"></p></div>
+        <div><h4 class="h-how"></h4><p class="how"></p><h4 class="h-bp"></h4><p class="bp"></p><p class="evi"></p></div>
       </div>
+      <div class="manual"><h4 class="h-proc"></h4><ol class="steps"></ol><h4 class="h-expd"></h4><p class="expd"></p></div>
       <table class="checks"><thead><tr><th></th><th class="th-test"></th><th class="th-exp"></th><th class="th-res"></th><th></th></tr></thead><tbody></tbody></table>
     </div>
   </article>

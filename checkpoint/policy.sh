@@ -19,7 +19,7 @@ INTERNAL=$(lab '.internal_cidr // "10.0.0.0/8"')
 SRV=$(lab '.server_env // empty')
 role() { lab --arg r "$1" '.roles[$r] // empty | if type=="array" then .[] else . end'; }
 svc() { case $1 in icmp) echo echo-request;; http) echo http;; https) echo https;; ssh) echo ssh;; rdp) echo Remote_Desktop_Protocol;;
-        tcp8080) echo HTTP_proxy;; iperf3) echo TK_exception_port;; *) echo "$1";; esac; }
+        tcp8080) echo HTTP_proxy;; iperf3) echo TK_exception_port; echo TK_exception_port_udp;; *) echo "$1";; esac; }
 rule_exists() { cp "show-${1}-rule" "{\"name\":\"$3\",\"layer\":\"$2\"}" | jq -e '.uid' >/dev/null; }
 
 log "Objects"
@@ -33,6 +33,8 @@ exists group TK_Envs && api set-group "{\"name\":\"TK_Envs\",\"members\":$ENVS_J
 exists network TK_Internal || api add-network "{\"name\":\"TK_Internal\",\"subnet\":\"${INTERNAL%/*}\",\"mask-length\":${INTERNAL#*/},\"ignore-warnings\":true,$TAGS}"
 P=$(lab '.internet.exception_port // 5201')
 exists service-tcp TK_exception_port || api add-service-tcp "{\"name\":\"TK_exception_port\",\"port\":\"$P\",\"ignore-warnings\":true,$TAGS}"
+# UDP on the same port: iperf3 UDP measurements (PERF-07)
+exists service-udp TK_exception_port_udp || api add-service-udp "{\"name\":\"TK_exception_port_udp\",\"port\":\"$P\",\"ignore-warnings\":true,$TAGS}"
 exists service-tcp TK_http_sig  || api add-service-tcp "{\"name\":\"TK_http_sig\",\"ignore-warnings\":true,\"port\":\"80\",\"protocol\":\"HTTP\",\"match-by-protocol-signature\":true,$TAGS}"
 exists service-tcp TK_https_sig || api add-service-tcp "{\"name\":\"TK_https_sig\",\"ignore-warnings\":true,\"port\":\"443\",\"protocol\":\"ENC-HTTP\",\"match-by-protocol-signature\":true,$TAGS}"
 site() { exists application-site "$1" || api add-application-site "$(jq -nc --arg n "$1" --argjson u "$2" '{name:$n, "primary-category":"Custom_Application_Site", "url-list":$u, "urls-defined-as-regular-expression":false, tags:["firewall-testkit"]}')"; }
@@ -66,6 +68,8 @@ AR "$NETL" "{\"name\":\"TK CA - block executables\",\"source\":[\"TK_Envs\"],\"d
 ALW=$(lab -c '[.segmentation.always[]?]'); if [ "$ALW" != "[]" ]; then
   S=$(jq -c '[.[]]' <<<"$ALW" | jq -r '.[]' | while read -r x; do svc "$x"; done | jq -Rcs 'split("\n")|map(select(length>0))')
   AR "$NETL" "{\"name\":\"TK exception - between all environments\",\"source\":[\"TK_Envs\"],\"destination\":[\"TK_Envs\"],\"service\":$S,\"action\":\"Accept\",\"track\":{\"type\":\"Log\",\"accounting\":true}}"
+  # rule created by an older version: add the UDP service (PERF-07)
+  jq -e 'index("TK_exception_port_udp")' <<<"$S" >/dev/null && cp set-access-rule "{\"layer\":\"$NETL\",\"name\":\"TK exception - between all environments\",\"service\":{\"add\":\"TK_exception_port_udp\"}}" >/dev/null
 fi
 for pair in $(lab -r '.segmentation.allow | keys[]'); do
   s=${pair%>*}; d=${pair#*>}
@@ -109,7 +113,8 @@ I=$(role ids_target)
 [ -n "$I" ] && { HAS "TK IDS towards $I" || api add-threat-rule "{\"layer\":\"$TPL\",\"position\":\"top\",\"name\":\"TK IDS towards $I\",\"source\":[\"TK_Envs\"],\"destination\":[\"TK_$I\"],\"protected-scope\":[\"Any\"],\"action\":\"$DT\",\"track\":\"Log\"}"; }
 EWR=$(TRB | jq -r 'map(select(.name=="TK east-west"))[0].uid')
 XHAS() { cp show-threat-rule-exception-rulebase "{\"name\":\"$TPL\",\"rule-uid\":\"$EWR\"}" | jq -e --arg n "$1" '[..|objects|select(.name?==$n)]|length>0' >/dev/null; }
-XHAS "TK exception port (not inspected)" || api add-threat-exception "{\"layer\":\"$TPL\",\"rule-uid\":\"$EWR\",\"position\":\"top\",\"name\":\"TK exception port (not inspected)\",\"source\":[\"TK_Envs\"],\"destination\":[\"TK_Envs\"],\"service\":[\"TK_exception_port\"],\"protected-scope\":[\"Any\"],\"protection-or-site\":[\"Any\"],\"action\":\"Inactive\",\"track\":\"None\"}"
+XHAS "TK exception port (not inspected)" || api add-threat-exception "{\"layer\":\"$TPL\",\"rule-uid\":\"$EWR\",\"position\":\"top\",\"name\":\"TK exception port (not inspected)\",\"source\":[\"TK_Envs\"],\"destination\":[\"TK_Envs\"],\"service\":[\"TK_exception_port\",\"TK_exception_port_udp\"],\"protected-scope\":[\"Any\"],\"protection-or-site\":[\"Any\"],\"action\":\"Inactive\",\"track\":\"None\"}"
+XHAS "TK exception port (not inspected)" && cp set-threat-exception "{\"layer\":\"$TPL\",\"rule-uid\":\"$EWR\",\"name\":\"TK exception port (not inspected)\",\"service\":{\"add\":\"TK_exception_port_udp\"}}" >/dev/null
 X=$(role ips_exception_client)
 [ -n "$X" ] && [ -n "$SRV" ] && { XHAS "TK IPS-04 $X -> $SRV" || api add-threat-exception "{\"layer\":\"$TPL\",\"rule-uid\":\"$EWR\",\"position\":\"top\",\"name\":\"TK IPS-04 $X -> $SRV\",\"source\":[\"TK_$X\"],\"destination\":[\"TK_$SRV\"],\"service\":[\"Any\"],\"protected-scope\":[\"Any\"],\"protection-or-site\":[\"TP-Link Archer AX21 Command Injection (CVE-2023-1389)\"],\"action\":\"Detect\",\"track\":\"Log\"}"; }
 

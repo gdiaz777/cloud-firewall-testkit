@@ -27,15 +27,21 @@ const T = {
       "**Decrypted / Not decrypted**: the issuer of the received certificate is (or is not) the TLS inspection CA of the solution under test.",
       "**Measure**: characterization checks (MTU, HTTPS Inspection overhead) without a pass threshold.",
       "**Informative**: classes the catalog assigns to a WAF; run to document IPS coverage.",
-      "**Not applicable**: the check does not apply to that client (e.g., from the server environment to itself, or not configured)."],
-    asked: "Objective.", how: "Check Point notes.", req: "Policy prerequisites.",
+      "**Not applicable**: the check does not apply to that client (e.g., from the server environment to itself, or not configured).",
+      "**Control agent (CONTROL)**: operator-side checks through the cloud and management APIs (high availability, logs, policy, operations); during failovers every client probes continuously.",
+      "**Meets criterion / Does not meet**: result of a check with an explicit acceptance criterion stated in its detail."],
+    asked: "Objective.", how: "Check Point notes.", req: "Firewall configuration needed.", bp: "Check Point best practice.",
+    manual_s: "Manual procedures", manual_intro: (n) => `${n} cases of the catalog are validated by following a procedure (management and cloud consoles, integrations, costs). They are listed here with their steps, expected result and evidence so they can be run and recorded.`,
+    manual_line: (n) => `**${n} manual cases** are described with their procedure in the "Manual procedures" chapter.`, proc: "Procedure.", expd: "Expected result.", evi: "Evidence.",
+    scope: "Needs infrastructure beyond the reference environment.", fwc: "Annex: firewall configuration", fwc_intro: "Configuration the firewall under test must have so the automated checks are meaningful (vendor-neutral).",
+    fwc_cp: "Check Point recommended baseline",
     c_id: "#", c_check: "Check", c_client: "Client", c_exp: "Expected", c_obs: "Observed", c_res: "Result", c_det: "Detail",
     annex: "Annex: run data", field: "Field", value: "Value", start: "Start", client: "Client", envs: "Environments", catalog: "Catalog",
     catline: (n, k) => `${n} cases, ${k} automated checks`, notfinished: "not finished",
     logs: "Each check can be found in the firewall logs (Logs & Monitor) by filtering on the client's source IP and the start time in the run CSV.",
     ST: { OK: "Pass", FAIL: "Fail", ERROR: "Fail", INFO: "Measure", SKIP: "Not applicable" }, V: { Cumple: "Pass", Parcial: "Partial", "No cumple": "Fail", Medida: "Measure" },
     EXP: { ALLOW: "Allowed", BLOCK: "Blocked", INSPECTED: "Decrypted", NOT_INSPECTED: "Not decrypted", VALID: "Cert. valid", INVALID: "Cert. rejected", PRESERVED: "IP preserved",
-      CHANGED: "IP changed", LIMITED: "Authorized only", EXPOSED: "Exposed", MEASURE: "Measure", NO_FLOW: "No flow", FLOW: "Flow", ERROR: "Error", "-": "—" },
+      CHANGED: "IP changed", LIMITED: "Authorized only", EXPOSED: "Exposed", MEASURE: "Measure", NO_FLOW: "No flow", FLOW: "Flow", ERROR: "Error", PASS: "Criterion met", NOT_MET: "Criterion not met", "-": "—" },
   },
   es: {
     kicker: "FIREWALL TESTKIT · VALIDACIÓN DE SEGURIDAD", title: "Informe de pruebas de seguridad", footer: "Firewall Testkit · Confidencial · Página ",
@@ -53,15 +59,21 @@ const T = {
       "**Descifrado / Sin descifrar**: el emisor del certificado recibido es (o no) la CA de inspección TLS de la solución probada.",
       "**Medida**: pruebas de caracterización (MTU, sobrecoste de HTTPS Inspection) sin umbral de aprobado.",
       "**Informativa**: clases que el catálogo atribuye a un WAF; se ejecutan para documentar la cobertura del IPS.",
-      "**No aplica**: la comprobación no corresponde a ese cliente (por ejemplo, desde el entorno del servidor hacia sí mismo, o sin configurar)."],
-    asked: "Objetivo.", how: "Notas de Check Point.", req: "Requisitos de política.",
+      "**No aplica**: la comprobación no corresponde a ese cliente (por ejemplo, desde el entorno del servidor hacia sí mismo, o sin configurar).",
+      "**Agente de control (CONTROL)**: comprobaciones del lado del operador por las API de la nube y de la gestión (alta disponibilidad, registros, política, operación); durante los failovers todos los clientes sondean de forma continua.",
+      "**Cumple criterio / No cumple criterio**: resultado de una comprobación con un criterio de aceptación explícito, indicado en su detalle."],
+    asked: "Objetivo.", how: "Notas de Check Point.", req: "Configuración necesaria en el firewall.", bp: "Buena práctica de Check Point.",
+    manual_s: "Procedimientos manuales", manual_intro: (n) => `${n} casos del catálogo se validan siguiendo un procedimiento (consolas de gestión y de la nube, integraciones, costes). Se recogen aquí con sus pasos, el resultado esperado y las evidencias para ejecutarlos y registrarlos.`,
+    manual_line: (n) => `**${n} casos manuales** se describen con su procedimiento en el capítulo «Procedimientos manuales».`, proc: "Procedimiento.", expd: "Resultado esperado.", evi: "Evidencias.",
+    scope: "Requiere infraestructura adicional al entorno de referencia.", fwc: "Anexo: configuración del firewall", fwc_intro: "Configuración que debe tener el firewall probado para que las comprobaciones automáticas tengan sentido (neutral respecto al fabricante).",
+    fwc_cp: "Configuración base recomendada de Check Point",
     c_id: "#", c_check: "Comprobación", c_client: "Cliente", c_exp: "Esperado", c_obs: "Observado", c_res: "Resultado", c_det: "Detalle",
     annex: "Anexo: datos de la ejecución", field: "Campo", value: "Valor", start: "Inicio", client: "Cliente", envs: "Entornos", catalog: "Catálogo",
     catline: (n, k) => `${n} casos, ${k} comprobaciones automáticas`, notfinished: "sin terminar",
     logs: "Cada comprobación se localiza en los registros del firewall (Logs & Monitor) filtrando por la IP de origen del cliente y la hora de inicio que figura en el CSV de la ejecución.",
     ST: { OK: "Cumple", FAIL: "No cumple", ERROR: "No cumple", INFO: "Medida", SKIP: "No aplica" }, V: { Cumple: "Cumple", Parcial: "Parcial", "No cumple": "No cumple", Medida: "Medida" },
     EXP: { ALLOW: "Permitido", BLOCK: "Bloqueado", INSPECTED: "Descifrado", NOT_INSPECTED: "Sin descifrar", VALID: "Cert. válido", INVALID: "Cert. rechazado", PRESERVED: "IP conservada",
-      CHANGED: "IP cambiada", LIMITED: "Solo autorizados", EXPOSED: "Expuesto", MEASURE: "Medida", NO_FLOW: "Sin flujo", FLOW: "Con flujo", ERROR: "Error", "-": "—" },
+      CHANGED: "IP cambiada", LIMITED: "Solo autorizados", EXPOSED: "Expuesto", MEASURE: "Medida", NO_FLOW: "Sin flujo", FLOW: "Con flujo", ERROR: "Error", PASS: "Cumple criterio", NOT_MET: "No cumple criterio", "-": "—" },
   },
 }[LANG];
 
@@ -83,6 +95,7 @@ const verdict = (id) => {
 };
 const verdicts = caseIds.map(verdict);
 const who = Object.entries(run.agents).map(([n, a]) => `${(a.env || n).toUpperCase()} (${a.src || "?"})`).join(", ");
+const manualCases = cat.cases.filter((c) => c.mode === "manual" && (!(run.ids || []).length || run.ids.includes(c.id)));
 const cfg = run.config || {};
 const SOL = (typeof run.solution === "string" && run.solution) || (cfg.solution || {}).name || (LANG === "es" ? "la solución probada" : "the solution under test");
 const isCP = /check ?point/i.test(((cfg.solution || {}).vendor || "") + " " + SOL);
@@ -93,6 +106,7 @@ const children = [
   ...L.toc(T.contents),
   L.H1(`1. ${T.s1}`),
   L.P(T.lead(exec.length, caseIds.length, who, ok, ok + bad, info)),
+  ...(manualCases.length ? [L.P(T.manual_line(manualCases.length))] : []),
   L.kpis([
     { v: `${ok}/${ok + bad}`, l: T.k_exp, s: bad ? "Parcial" : "OK" },
     { v: `${verdicts.filter((v) => v === "Cumple").length}/${verdicts.filter((v) => v !== "Medida").length}`, l: T.k_cases, s: verdicts.includes("No cumple") || verdicts.includes("Parcial") ? "Parcial" : "OK" },
@@ -127,11 +141,42 @@ for (const d of cat.domains) {
     children.push(L.P(`**${T.asked}** ${tr(c.objective)}`));
     if (isCP && c.vendor_notes && c.vendor_notes.checkpoint) children.push(L.P(`**${T.how}** ${tr(c.vendor_notes.checkpoint)}`));
     children.push(L.P(`**${T.req}** ${tr(c.requires)}`, { color: "4B5563" }));
+    if (isCP && c.bp_checkpoint) children.push(L.P(`**${T.bp}** ${tr(c.bp_checkpoint)}`, { color: "5B21B6" }));
     const cols = [{ h: T.c_id, w: 0.45 }, { h: T.c_check, w: 2.3 }, ...(multi ? [{ h: T.c_client, w: 0.75 }] : []), { h: T.c_exp, w: 1.05 }, { h: T.c_obs, w: 1.05 }, { h: T.c_res, w: 1, status: true }, { h: T.c_det, w: 2.8 }];
     children.push(L.table(cols, results.filter((r) => r.case === id).map((r) => [r.id.replace(id + ".", ""), r.name, ...(multi ? [(r.env || r.agent).toUpperCase()] : []),
       T.EXP[r.expect] || r.expect, T.EXP[r.observed] || r.observed, T.ST[r.status], r.detail])));
     children.push(L.spacer(80));
   }
+}
+
+if (manualCases.length) {
+  children.push(L.H1(`${n++}. ${T.manual_s}`));
+  children.push(L.P(T.manual_intro(manualCases.length)));
+  let inst = 1;
+  for (const d of cat.domains) {
+    const cs = manualCases.filter((c) => c.domain === d.id);
+    if (!cs.length) continue;
+    for (const c of cs) {
+      children.push(L.H2(`${c.id} · ${tr(c.title)}`));
+      children.push(L.P(`**${T.asked}** ${tr(c.objective)}`));
+      children.push(L.P(`**${T.req}** ${tr(c.requires)}`, { color: "4B5563" }));
+      if (c.scope) children.push(L.P(T.scope, { color: "6B7280" }));
+      children.push(L.P(`**${T.proc}**`));
+      inst++; (c.procedure || []).forEach((st) => children.push(L.numbered(tr(st), inst)));
+      children.push(L.P(`**${T.expd}** ${tr(c.expected)}`));
+      children.push(L.P(`**${T.evi}** ${tr(c.evidence)}`, { color: "4B5563" }));
+      if (isCP && c.vendor_notes && c.vendor_notes.checkpoint) children.push(L.P(`**${T.how}** ${tr(c.vendor_notes.checkpoint)}`));
+      if (isCP && c.bp_checkpoint) children.push(L.P(`**${T.bp}** ${tr(c.bp_checkpoint)}`, { color: "5B21B6" }));
+      children.push(L.spacer(80));
+    }
+  }
+}
+const guide = cat.config_guide || {};
+if ((guide.firewall || []).length) {
+  children.push(L.H1(`${n++}. ${T.fwc}`));
+  children.push(L.P(T.fwc_intro));
+  guide.firewall.forEach((x) => children.push(L.bullet(tr(x))));
+  if (isCP && (guide.checkpoint || []).length) { children.push(L.H2(T.fwc_cp)); guide.checkpoint.forEach((x) => children.push(L.bullet(tr(x)))); }
 }
 
 children.push(L.H1(`${n}. ${T.annex}`));
