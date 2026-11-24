@@ -434,8 +434,8 @@ def t_iperf(c, cfg):
             j = json.loads(out)
         except ValueError:
             return "ERROR", f"iperf3 rc={rc} {err.strip()[:120]}"
-        if "busy" in str(j.get("error", "")):
-            time.sleep(10); continue
+        if re.search(r"busy|unable to (read|receive|connect)|temporarily unavailable", str(j.get("error", ""))):
+            time.sleep(10); continue   # server busy or still closing the previous test
         break
     if j.get("error"):
         return "ERROR", f"iperf3: {j['error'][:150]}"
