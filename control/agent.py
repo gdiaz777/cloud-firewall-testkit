@@ -167,11 +167,12 @@ def fmt_outages(res, t0, t1, denied_note=True):
         txt = []
         for name in ("server", "internet"):
             if name in o:
-                txt.append(f"{name} {o[name]['longest']} s"); worst = max(worst, o[name]["longest"])
+                fail = 100 * (o[name]["n"] - o[name]["ok"]) / max(1, o[name]["n"])
+                txt.append(f"{name} {o[name]['longest']} s ({fail:.0f} % of probes failed)"); worst = max(worst, o[name]["longest"])
         if "denied" in o:
             leaks += o["denied"]["ok"]
         parts.append(f"{(r['env'] or a).upper()}: " + ", ".join(txt))
-    det = "longest interruption per client: " + "; ".join(parts)
+    det = "longest continuous interruption per client (and share of failed probes in the window): " + "; ".join(parts)
     if denied_note:
         det += f"; denied flow went through {leaks} times" if leaks else "; the denied flow never went through"
     return det, worst, leaks

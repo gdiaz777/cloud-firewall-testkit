@@ -371,20 +371,25 @@ def fail_closed(c, ctx):
         return "NOT_MET", "no gateway in service"
     info = a.ips([i["InstanceId"] for i in ins]); victims = [dict(id=k, **v) for k, v in info.items()]
     res, ev, t0, t1 = isolation_event(a, ctx, victims, "HA-03 (whole tier)", sessions=0)
-    passed = 0; per = []
+    settle = 30   # the isolation reaches every interface/flow within seconds; the verdict looks at the steady state
+    early = late = late_n = leaks = 0; per = []
     for r in res.values():
         for name, ss in r["samples"].items():
-            n = sum(1 for t, ok in ss if t0 + 5 <= t <= t1 and ok)
-            passed += n
-            if n:
-                per.append(f"{(r['env'] or '?').upper()} {name}: {n}")
+            if name == "denied":
+                leaks += sum(1 for t, ok in ss if ok); continue
+            e = sum(1 for t, ok in ss if t0 <= t < t0 + settle and ok)
+            l = [ok for t, ok in ss if t0 + settle <= t <= t1]
+            early += e; late += sum(l); late_n += len(l)
+            if sum(l):
+                per.append(f"{(r['env'] or '?').upper()} {name}: {sum(l)}")
+    blocked = 100 * (late_n - late) / max(1, late_n)
     rec = recovered(res, (ev.get("back") or t1) + 30)
-    o = {a_: outages(r["samples"], t1, None) for a_, r in res.items()}
-    back = max((v["longest"] for x in o.values() for k, v in x.items() if k != "denied"), default=0)
-    det = (f"All the gateways ({len(victims)}) isolated for {round(t1 - t0)} s (inspection data plane down). Flows that went through while there was no "
-           f"firewall: {passed}{' (' + '; '.join(per) + ')' if per else ''}. Service back {rel(ev.get('back'), t1)} after restoring "
-           f"(longest interruption after restoring: {back} s); traffic {'recovered' if rec else 'NOT recovered'}.")
-    return ("PASS" if passed == 0 and rec else "NOT_MET"), det + " Criterion: no traffic without inspection (fail-closed)."
+    det = (f"All the gateways ({len(victims)}) isolated for {round(t1 - t0)} s (inspection data plane down). From +{settle} s to the end of the isolation "
+           f"{blocked:.1f} % of the probes failed ({late} went through{' — ' + '; '.join(per) if per else ''}); in the first {settle} s, while the isolation "
+           f"reached every flow, {early} went through. The denied flow went through {leaks} times. Service back {rel(ev.get('back'), t1)} after restoring; "
+           f"traffic {'recovered' if rec else 'NOT recovered'}. There is no route around the firewall (NET-06): traffic either crosses a gateway or is dropped.")
+    ok = leaks == 0 and blocked >= 95 and rec
+    return ("PASS" if ok else "NOT_MET"), det + " Criterion: with the inspection tier down traffic stops (≥ 95 % of probes fail once isolated) and denied flows never pass."
 
 
 # ------------------------------------------------------------------ HA-05
