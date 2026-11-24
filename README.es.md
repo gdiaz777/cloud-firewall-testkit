@@ -32,27 +32,37 @@ además sus buenas prácticas).
 
 ## Puesta en marcha
 
-En el **servidor de pruebas** (Linux con Docker):
+En el **servidor de pruebas** (Linux con Docker). `SERVER_IP` es la **IP de workload** del servidor (la que los
+clientes alcanzan a través de la solución); ponla si el equipo tiene más de una interfaz (p. ej. una de gestión), si no
+se usa la primera:
 
 ```bash
-docker run -d --name testkit-server --network host -v testkit-data:/data \
+docker run -d --name testkit-server --network host -e SERVER_IP=<IP de workload del servidor> -v testkit-data:/data \
   ghcr.io/gdiaz777/cloud-firewall-testkit:latest server
 ```
 
-En cada **cliente** (uno por segmento o entorno):
+En cada **cliente** (uno por segmento o entorno). `TESTKIT_ENV` es el nombre de entorno que usará el portal (p. ej.
+`pro`, `pre`, `dev`): sin él se usa el nombre del equipo, y renombrarlo después en el portal rompe la relación con el
+cliente:
 
 ```bash
 docker run -d --name testkit-client --network host --cap-add NET_RAW --cap-add NET_ADMIN \
-  -e SERVER=<IP del servidor> ghcr.io/gdiaz777/cloud-firewall-testkit:latest client
+  -e SERVER=<IP de workload del servidor> -e TESTKIT_ENV=<nombre del entorno> ghcr.io/gdiaz777/cloud-firewall-testkit:latest client
 ```
 
-Abre `http://<IP del servidor>/portal/` → **Configuración**:
+Abre `http://<IP del servidor>/portal/` (desde un equipo de administración: la dirección que alcances) → **Configuración**:
 
-1. **Solución probada**: nombre (etiqueta las ejecuciones y los informes).
-2. **Entornos**: *Añadir clientes conectados* y ajusta nombres, CIDR y la matriz de segmentación (qué puede alcanzar
-   cada entorno). Deja vacío lo que no aplique: esas pruebas salen como *no aplica*.
-3. **CA de inspección TLS**: pega el certificado de la CA con la que la solución re-firma el TLS inspeccionado (si la hay).
-4. Guarda, ve a **Pruebas** y pulsa **Ejecutar todo**, o ejecuta pruebas y casos sueltos.
+1. **Solución probada**: nombre y fabricante (etiqueta ejecuciones e informes; con Check Point se muestran sus notas y
+   buenas prácticas).
+2. **Entornos**: *Añadir clientes conectados* y completa CIDR, AZ, el entorno que aloja el **servidor de pruebas** y los
+   pares en otra AZ; después la **matriz de segmentación** (qué puede alcanzar cada entorno).
+3. **Papeles**: qué entornos hacen cada papel (producción/no producción, destino IDS, excepciones, **perf_client** para
+   las pruebas de rendimiento…). Deja vacío lo que no aplique: esas pruebas salen como *no aplica*.
+4. **Destinos en Internet**: cámbialos solo si la política usa otros sitios.
+5. **CA de inspección TLS**: pega el certificado de la CA con la que la solución re-firma el TLS inspeccionado (la
+   configuración base de Check Point de abajo la sube sola).
+6. Guarda. Después configura el firewall como indica la pestaña **Configuración del firewall** (o aplica la
+   configuración base de Check Point), ve a **Pruebas** y pulsa **Ejecutar todo**, o ejecuta pruebas y casos sueltos.
 
 Al terminar, descarga el **informe Word (ES/EN)** o el CSV. Requisitos: los clientes deben llegar al servidor por
 HTTP (tcp/80) a través de la solución; el servidor genera su propia CA de pruebas y los clientes la descargan solos.
@@ -87,9 +97,12 @@ prevención de amenazas por tipo de flujo, DLP e inspección TLS— y sube la CA
 
 ```bash
 cd checkpoint && ./cp-baseline.sh setup                       # URL de la gestora + API key
-./cp-baseline.sh apply --portal http://<IP del servidor>/portal --push-ca
+./cp-baseline.sh apply --portal http://<dirección del portal>/portal --push-ca
 ./cp-baseline.sh install <gateway> …                         # o --prefix <prefijo>
 ```
+
+Ejecútalo después de guardar la configuración del portal (lee de ahí entornos, matriz y papeles), desde un equipo que
+alcance la API de la gestión y el portal (`<dirección del portal>`: la que abres en el navegador).
 
 Ver [docs/es/checkpoint-baseline.md](docs/es/checkpoint-baseline.md) y la [guía de configuración de Check Point](docs/es/configuracion-firewall.md).
 

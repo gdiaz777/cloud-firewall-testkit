@@ -30,27 +30,36 @@ under test is Check Point).
 
 ## Quick start
 
-On the **test server** (Linux host with Docker):
+On the **test server** (Linux host with Docker). `SERVER_IP` is the server's **workload IP** (the one the clients
+reach through the solution); set it when the host has more than one interface (e.g. a management NIC), otherwise the
+first address is used:
 
 ```bash
-docker run -d --name testkit-server --network host -v testkit-data:/data \
+docker run -d --name testkit-server --network host -e SERVER_IP=<server workload IP> -v testkit-data:/data \
   ghcr.io/gdiaz777/cloud-firewall-testkit:latest server
 ```
 
-On every **client** (one per network segment / environment):
+On every **client** (one per network segment / environment). `TESTKIT_ENV` is the environment name the portal will
+use (e.g. `pro`, `pre`, `dev`): without it the host name is used, and renaming it later in the portal breaks the match
+with the client:
 
 ```bash
 docker run -d --name testkit-client --network host --cap-add NET_RAW --cap-add NET_ADMIN \
-  -e SERVER=<server IP> ghcr.io/gdiaz777/cloud-firewall-testkit:latest client
+  -e SERVER=<server workload IP> -e TESTKIT_ENV=<environment name> ghcr.io/gdiaz777/cloud-firewall-testkit:latest client
 ```
 
-Open `http://<server IP>/portal/` → **Settings**:
+Open `http://<server IP>/portal/` (from an admin host: the address you can reach) → **Settings**:
 
-1. **Solution under test**: name (it labels runs and reports).
-2. **Environments**: *Add connected clients*, then adjust names, CIDRs and the segmentation matrix (what each
-   environment may reach). Leave empty what does not apply: those checks are reported as *not applicable*.
-3. **TLS inspection CA**: paste the CA certificate the solution uses to re-sign inspected TLS (if any).
-4. Save, go to **Tests** and click **Run all** — or run single checks and cases.
+1. **Solution under test**: name and vendor (it labels runs and reports; Check Point shows its notes and best practices).
+2. **Environments**: *Add connected clients*, then fill CIDR, AZ, the environment that hosts the **test server** and the
+   cross-AZ peers; then the **segmentation matrix** (what each environment may reach).
+3. **Roles**: which environments play each role (production/non-production, IDS target, exceptions, **perf_client** for
+   the performance checks…). Leave empty what does not apply: those checks are reported as *not applicable*.
+4. **Internet targets**: change them only if the policy uses other sites.
+5. **TLS inspection CA**: paste the CA certificate the solution uses to re-sign inspected TLS (the Check Point
+   baseline below uploads it for you).
+6. Save. Then configure the firewall as the **Firewall configuration** tab describes (or apply the Check Point baseline),
+   go to **Tests** and click **Run all** — or run single checks and cases.
 
 When a run finishes, download the **Word report (EN/ES)** or the CSV. Requirements: the clients must reach the server
 over HTTP (tcp/80) through the solution; the server generates its own test CA and clients fetch it automatically.
@@ -84,9 +93,12 @@ DLP and TLS inspection — and uploads the inspection CA to the portal:
 
 ```bash
 cd checkpoint && ./cp-baseline.sh setup                       # management URL + API key
-./cp-baseline.sh apply --portal http://<server IP>/portal --push-ca
+./cp-baseline.sh apply --portal http://<portal address>/portal --push-ca
 ./cp-baseline.sh install <gateway> …                         # or --prefix <name prefix>
 ```
+
+Run it after saving the portal settings (it reads environments, matrix and roles from the portal), from a host that
+reaches both the management API and the portal (`<portal address>`: the one you open in the browser).
 
 See [docs/en/checkpoint-baseline.md](docs/en/checkpoint-baseline.md) and the [Check Point configuration guide](docs/en/firewall-setup.md).
 

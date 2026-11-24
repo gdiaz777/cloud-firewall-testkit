@@ -16,13 +16,19 @@ largas**, y mide las interrupciones.
 
 ```bash
 git clone https://github.com/gdiaz777/cloud-firewall-testkit && cd cloud-firewall-testkit
-pip install boto3            # hooks de AWS
-export PORTAL_URL=http://<servidor>/portal CONTROL_CONFIG=control.json MGMT_API_KEY=<clave API de la gestión>
+python3 -m venv .venv && . .venv/bin/activate && pip install boto3     # hooks de AWS (apt install python3-venv si falta)
+export PORTAL_URL=http://<dirección del portal>/portal CONTROL_CONFIG=control.json MGMT_API_KEY=<clave API de la gestión>
 python3 control/agent.py                 # modo agente («Ejecutar todo» en el portal incluye sus pruebas)
 python3 control/agent.py run HA-01       # puntual desde la línea de comandos
 ```
 
-El fichero `control.json` tiene el mismo formato que en la [versión en inglés](../en/control-agent.md#run-it).
+El fichero `control.json` tiene el mismo formato que en la [versión en inglés](../en/control-agent.md#run-it). De dónde
+sale cada dato: `asg_name` es el grupo de autoescalado de los gateways (EC2 → Auto Scaling groups); `cme_role_arn` el rol
+IAM que asume la gestión (CME) para leer la cuenta; `gateway_prefix` el prefijo de los objetos gateway que crea la gestión
+(p. ej. `<nombre de la cuenta de CME>--`); `post_provision_cmd` un comando opcional que se ejecuta cuando un gateway nuevo
+ya tiene su política (variables `TK_GATEWAY`, `TK_SINCE`). Las credenciales de AWS salen de la cadena habitual
+(variables, perfil, rol de instancia) o de `env_file`. `PORTAL_URL` es la dirección del portal alcanzable desde este
+equipo; el agente aparece como `CONTROL` en el portal y **Ejecutar todo** incluye sus pruebas.
 
 Nube y fabricante: hooks de AWS (`control/aws_hooks.py`) y de Check Point (`checkpoint/control_hooks.py`). Con otras
 nubes o fabricantes esas pruebas salen como *no aplica*; un fabricante nuevo solo necesita un

@@ -15,8 +15,8 @@ client and shows up as `CONTROL`. While it fails a gateway over, it asks every c
 
 ```bash
 git clone https://github.com/gdiaz777/cloud-firewall-testkit && cd cloud-firewall-testkit
-pip install boto3            # AWS hooks
-export PORTAL_URL=http://<server>/portal CONTROL_CONFIG=control.json MGMT_API_KEY=<management API key>
+python3 -m venv .venv && . .venv/bin/activate && pip install boto3     # AWS hooks (apt install python3-venv if missing)
+export PORTAL_URL=http://<portal address>/portal CONTROL_CONFIG=control.json MGMT_API_KEY=<management API key>
 python3 control/agent.py                 # agent mode (Run all in the portal includes its checks)
 python3 control/agent.py run HA-01       # one-off from the CLI
 ```
@@ -33,6 +33,13 @@ python3 control/agent.py run HA-01       # one-off from the CLI
   "state_dir": "~/.testkit-control"
 }
 ```
+
+Where each value comes from: `asg_name` is the Auto Scaling group of the gateways (EC2 → Auto Scaling groups);
+`cme_role_arn` the IAM role the management (CME) assumes to read the account; `gateway_prefix` the prefix of the gateway
+objects created by the management (e.g. `<CME account name>--`); `post_provision_cmd` an optional command run when a new
+gateway already has its policy (environment `TK_GATEWAY`, `TK_SINCE`). AWS credentials come from the usual chain
+(environment, profile, instance role) or from `env_file`. `PORTAL_URL` is the portal address reachable from this host;
+the agent shows up as `CONTROL` in the portal and **Run all** includes its checks.
 
 Cloud and vendor support: AWS hooks (`control/aws_hooks.py`) and Check Point hooks (`checkpoint/control_hooks.py`).
 For other clouds or vendors the checks are reported as *not applicable*; a new vendor only needs a

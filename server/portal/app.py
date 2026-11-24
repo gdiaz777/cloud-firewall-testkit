@@ -131,7 +131,8 @@ def put_config():
 def agents():
     t = time.time()
     with LOCK:
-        return jsonify([dict(name=n, **{k: v for k, v in a.items()}, online=t - a["last_seen"] < 45) for n, a in sorted(AGENTS.items())])
+        # agents that disappeared more than 10 minutes ago (e.g. renamed or removed clients) are no longer listed
+        return jsonify([dict(name=n, **{k: v for k, v in a.items()}, online=t - a["last_seen"] < 45) for n, a in sorted(AGENTS.items()) if t - a["last_seen"] < 600])
 
 
 # ------------------------------------------------------------------ runs
