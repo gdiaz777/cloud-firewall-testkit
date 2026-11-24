@@ -7,7 +7,7 @@ run-script and policy installation), mgmt.access_layer (default "<package> Netwo
 Changes made by a check (temporary rule, IoC, probe objects) are published and installed only on the gateways of the
 prefix and always removed at the end. Nothing global is changed.
 """
-import json, os, re, time, urllib.request
+import json, os, re, time, urllib.error, urllib.request
 from control.agent import Skip, hook, log
 
 PROTECTED_INSTALL_TRIES = 10
@@ -41,11 +41,18 @@ class Mgmt:
         if self.sid:
             h["X-chkp-sid"] = self.sid
         req = urllib.request.Request(f"{self.url}/{cmd}", data=json.dumps(body).encode(), headers=h)
-        try:
-            with urllib.request.urlopen(req, timeout=120) as f:
-                return json.loads(f.read() or b"{}")
-        except urllib.error.HTTPError as e:
-            raise RuntimeError(f"{cmd}: {e.read().decode()[:300]}") from None
+        for i in range(12):   # transient gateway errors of the management front end (502/503/504, timeouts): retry
+            try:
+                with urllib.request.urlopen(req, timeout=120) as f:
+                    return json.loads(f.read() or b"{}")
+            except urllib.error.HTTPError as e:
+                if e.code in (502, 503, 504) and i < 11:
+                    log(f"management {cmd}: HTTP {e.code}, retrying"); time.sleep(20); continue
+                raise RuntimeError(f"{cmd}: HTTP {e.code} {e.read().decode(errors='replace')[:300]}") from None
+            except (urllib.error.URLError, TimeoutError) as e:
+                if i < 11:
+                    log(f"management {cmd}: {e}, retrying"); time.sleep(20); continue
+                raise RuntimeError(f"{cmd}: {e}") from None
 
     def call(self, cmd, body=None):
         return self._post(cmd, body or {})
@@ -109,6 +116,20 @@ class Mgmt:
         https = ((p.get("https-inspection-layers") or {}).get("outbound-https-layer") or {}).get("name")
         return acc, thr, ([https] if https else [])
 
+    def access_layers(self):
+        """Ordered access layers of the package including inline layers (rules with «Apply Layer»)."""
+        acc, out = self.layers()[0], []
+        while acc:
+            L = acc.pop(0)
+            if L in out:
+                continue
+            out.append(L)
+            for r, names in self.rulebase("access", L):
+                il = r.get("inline-layer")
+                if il:
+                    acc.append(il.get("name") if isinstance(il, dict) else names.get(il, il))
+        return out
+
     def rulebase(self, kind, layer, **kw):
         items, off = [], 0
         while True:
@@ -160,7 +181,7 @@ def cpu_sample(ctx, seconds):
 @hook("checkpoint.unused_rules")
 def unused_rules(c, ctx):
     with Mgmt(ctx) as m:
-        acc, _, _ = m.layers(); tot, zero, off = 0, [], []
+        acc = m.access_layers(); tot, zero, off = 0, [], []
         for L in acc:
             for r, names in m.rulebase("access", L, **{"show-hits": True}):
                 if r.get("type") != "access-rule":
@@ -178,7 +199,7 @@ def unused_rules(c, ctx):
 
 # ------------------------------------------------------------------ POL-16
 def snapshot(m):
-    acc, thr, https = m.layers(); out = {}
+    _, thr, https = m.layers(); acc = m.access_layers(); out = {}
     for kind, layers in (("access", acc), ("threat", thr), ("https", https)):
         for L in layers:
             rows = []

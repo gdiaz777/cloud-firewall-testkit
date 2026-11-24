@@ -28,6 +28,8 @@ URL = os.environ.get("PORTAL_URL", "").rstrip("/")
 NAME = os.environ.get("AGENT_NAME", "control")
 SETTINGS = json.load(open(os.environ["CONTROL_CONFIG"], encoding="utf-8")) if os.environ.get("CONTROL_CONFIG") else {}
 HOOKS = {}
+if __name__ == "__main__":   # the hook modules import control.agent: make it this same module (one HOOKS registry)
+    sys.modules["control.agent"] = sys.modules["__main__"]
 
 
 class Skip(Exception):
