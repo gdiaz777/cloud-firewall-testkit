@@ -35,6 +35,10 @@ const T = {
     manual_line: (n) => `**${n} manual cases** are described with their procedure in the "Manual procedures" chapter.`, proc: "Procedure.", expd: "Expected result.", evi: "Evidence.",
     scope: "Needs infrastructure beyond the reference environment.", fwc: "Annex: firewall configuration", fwc_intro: "Configuration the firewall under test must have so the automated checks are meaningful (vendor-neutral).",
     fwc_cp: "Check Point recommended baseline",
+    arch: "Figure. Tested architecture (from the portal settings).", ha_s: "High availability", ha_intro: "During every failover event (control agent) each client probes the server, the Internet and a denied flow once per second and keeps long sessions open. The charts summarise the interruptions and the replacement of a failed gateway; the case tables below have the detail.",
+    ha_f1: "Figure. Longest continuous interruption per client.", ha_f2: "Figure. Timeline of the automatic replacement of a gateway.",
+    perf_s: "Performance", perf_intro: "Measured from one client to the test server through the solution. They are lower bounds of the deployment (also limited by the test instances), not the maximum of the solution.",
+    pf1: "Figure. Throughput with access control only (grey) and with the full inspection profile (red).", pf2: "Figure. Latency p50/p95/p99.", pf3: "Figure. Packets per second and loss with UDP.",
     c_id: "#", c_check: "Check", c_client: "Client", c_exp: "Expected", c_obs: "Observed", c_res: "Result", c_det: "Detail",
     annex: "Annex: run data", field: "Field", value: "Value", start: "Start", client: "Client", envs: "Environments", catalog: "Catalog",
     catline: (n, k) => `${n} cases, ${k} automated checks`, notfinished: "not finished",
@@ -67,6 +71,10 @@ const T = {
     manual_line: (n) => `**${n} casos manuales** se describen con su procedimiento en el capítulo «Procedimientos manuales».`, proc: "Procedimiento.", expd: "Resultado esperado.", evi: "Evidencias.",
     scope: "Requiere infraestructura adicional al entorno de referencia.", fwc: "Anexo: configuración del firewall", fwc_intro: "Configuración que debe tener el firewall probado para que las comprobaciones automáticas tengan sentido (neutral respecto al fabricante).",
     fwc_cp: "Configuración base recomendada de Check Point",
+    arch: "Figura. Arquitectura probada (según la configuración del portal).", ha_s: "Alta disponibilidad", ha_intro: "Durante cada evento de failover (agente de control) cada cliente sondea cada segundo el servidor, Internet y un flujo denegado, y mantiene sesiones largas abiertas. Las gráficas resumen las interrupciones y la sustitución de un gateway caído; el detalle está en las tablas de cada caso.",
+    ha_f1: "Figura. Interrupción continua más larga por cliente.", ha_f2: "Figura. Cronología de la sustitución automática de un gateway.",
+    perf_s: "Rendimiento", perf_intro: "Medido desde un cliente hacia el servidor de pruebas a través de la solución. Son mínimos del despliegue (limitados también por las instancias de prueba), no el máximo de la solución.",
+    pf1: "Figura. Caudal solo con control de acceso (gris) y con el perfil completo de inspección (rojo).", pf2: "Figura. Latencia p50/p95/p99.", pf3: "Figura. Paquetes por segundo y pérdida con UDP.",
     c_id: "#", c_check: "Comprobación", c_client: "Cliente", c_exp: "Esperado", c_obs: "Observado", c_res: "Resultado", c_det: "Detalle",
     annex: "Anexo: datos de la ejecución", field: "Campo", value: "Valor", start: "Inicio", client: "Cliente", envs: "Entornos", catalog: "Catálogo",
     catline: (n, k) => `${n} casos, ${k} comprobaciones automáticas`, notfinished: "sin terminar",
@@ -127,9 +135,21 @@ const children = [
   ...T.legend.map((x) => L.bullet(x)),
   ...(has("blades.png") ? [L.image(img("blades.png"), 580), L.caption(T.f3)] : []),
   ...(has("https.png") ? [L.image(img("https.png"), 480), L.caption(T.f4)] : []),
+  ...(has("architecture.png") ? [L.image(img("architecture.png"), 620), L.caption(T.arch)] : []),
 ];
 
 let n = 3;
+if (has("ha_outage.png") || has("ha_timeline.png")) {
+  children.push(L.H1(`${n++}. ${T.ha_s}`), L.P(T.ha_intro));
+  if (has("ha_outage.png")) children.push(L.image(img("ha_outage.png"), 600), L.caption(T.ha_f1));
+  if (has("ha_timeline.png")) children.push(L.image(img("ha_timeline.png"), 600), L.caption(T.ha_f2));
+}
+if (has("perf_throughput.png") || has("perf_latency.png")) {
+  children.push(L.H1(`${n++}. ${T.perf_s}`), L.P(T.perf_intro));
+  if (has("perf_throughput.png")) children.push(L.image(img("perf_throughput.png"), 600), L.caption(T.pf1));
+  if (has("perf_latency.png")) children.push(L.image(img("perf_latency.png"), 520), L.caption(T.pf2));
+  if (has("perf_udp.png")) children.push(L.image(img("perf_udp.png"), 520), L.caption(T.pf3));
+}
 const multi = Object.keys(run.agents).length > 1;
 for (const d of cat.domains) {
   const ids = caseIds.filter((id) => id.startsWith(d.id + "-"));

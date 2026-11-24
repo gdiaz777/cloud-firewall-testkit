@@ -82,4 +82,106 @@ if pp:
     stacked(ax, ks, pp)
     ax.set_title(TX["https"], loc="left", fontsize=10); ax.legend(loc="lower right", frameon=False, fontsize=8)
     fig.tight_layout(); fig.savefig(f"{out}/https.png", dpi=170); plt.close(fig)
+
+# ------------------------------------------------------------------ 5. architecture (from the run configuration)
+import re
+from matplotlib.patches import FancyBboxPatch
+AX = {"en": dict(sol="Solution under test", srv="test server + portal", cli="kit client", inet="Internet", ctl="Control agent\n(cloud + management APIs)",
+                 note="Every check leaves from a client's workload IP and crosses the solution under test"),
+      "es": dict(sol="Solución probada", srv="servidor + portal", cli="cliente del kit", inet="Internet", ctl="Agente de control\n(API de nube y de gestión)",
+                 note="Cada comprobación sale de la IP de workload de un cliente y atraviesa la solución probada")}[L]
+cfg = run.get("config") or {}
+envs = cfg.get("environments") or []
+if envs:
+    def box(ax, x, y, w, h, txt, fc, ec, fs=9, bold=False):
+        ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.02,rounding_size=0.12", fc=fc, ec=ec, lw=1.3))
+        ax.text(x + w / 2, y + h / 2, txt, ha="center", va="center", fontsize=fs, color="#1f2937", weight="bold" if bold else "normal")
+    n = len(envs); H = max(6.0, 1.6 * n + 1.2)
+    fig, ax = plt.subplots(figsize=(11, H * 0.62)); ax.set_xlim(0, 22); ax.set_ylim(0, H); ax.axis("off")
+    sol = (cfg.get("solution") or {}).get("name") or AX["sol"]
+    sy = H / 2 - 1.3
+    box(ax, 8.2, sy, 5.4, 2.6, f"{AX['sol']}\n{sol}", "#fef2f2", "#c8102e", 10, True)
+    for i, e in enumerate(envs):
+        y = H - 1.5 - i * ((H - 1.4) / max(1, n))
+        srv = e.get("name") == cfg.get("server_env")
+        txt = f"{e['name'].upper()}  {e.get('cidr') or e.get('ip', '')}" + (f" · AZ {e['az']}" if e.get("az") else "") + f"\n{AX['srv'] if srv else AX['cli']} ({e.get('ip', '')})"
+        box(ax, 0.3, y, 5.6, 1.15, txt, "#eff6ff" if not srv else "#fefce8", "#2563eb" if not srv else "#ca8a04", 8.5)
+        ax.annotate("", xy=(8.2, sy + 1.3), xytext=(5.9, y + 0.57), arrowprops=dict(arrowstyle="<|-|>", color="#2563eb", lw=1.2))
+    box(ax, 16.0, sy + 0.4, 5.2, 1.8, AX["inet"], "#ffffff", "#9ca3af", 11, True)
+    ax.annotate("", xy=(16.0, sy + 1.3), xytext=(13.6, sy + 1.3), arrowprops=dict(arrowstyle="-|>", color="#16a34a", lw=1.5))
+    if "control" in run.get("agents", {}):
+        box(ax, 16.0, H - 2.1, 5.2, 1.5, AX["ctl"], "#f5f3ff", "#7c3aed", 8.5)
+        ax.annotate("", xy=(13.0, sy + 2.6), xytext=(16.0, H - 1.35), arrowprops=dict(arrowstyle="-|>", color="#7c3aed", lw=1.2, ls=":"))
+    ax.text(11, 0.15, AX["note"], ha="center", fontsize=8.5, color="#6b7280")
+    fig.tight_layout(); fig.savefig(f"{out}/architecture.png", dpi=170); plt.close(fig)
+
+# ------------------------------------------------------------------ 6. performance (from the measurement details)
+PX = {"en": dict(thr="Throughput through the solution (Mbit/s)", lat="Latency (ms)", udp="UDP: packets/s and loss by datagram size",
+                 pps="thousand packets/s", loss="loss %"),
+      "es": dict(thr="Caudal a través de la solución (Mbit/s)", lat="Latencia (ms)", udp="UDP: paquetes/s y pérdida por tamaño de datagrama",
+                 pps="miles de paquetes/s", loss="pérdida %")}[L]
+cname = {k["id"]: (k["name"].get(L) if isinstance(k["name"], dict) else k["name"]) for c_ in cat["cases"] for k in c_["checks"]}
+perf = [r for r in res if r.get("status") == "INFO" and r.get("case", "").startswith("PERF-")]
+num = lambda pat, t: float(re.search(pat, t).group(1)) if re.search(pat, t) else None
+thr = [(cname.get(r["id"], r["id"]), num(r"(?:TCP|) ?(\d+) Mbit/s", r["detail"]), r["type"]) for r in perf if r["type"] in ("iperf", "dl_bench") and "UDP" not in r["detail"]]
+thr = [t for t in thr if t[1]]
+if thr:
+    fig, ax = plt.subplots(figsize=(7.6, 0.36 * len(thr) + 1.2))
+    ax.barh([f"{t[0]}" for t in thr][::-1], [t[1] for t in thr][::-1], color=["#c8102e" if t[2] == "dl_bench" else "#9ca3af" for t in thr][::-1])
+    for i, t in enumerate(thr[::-1]):
+        ax.text(t[1] * 1.01, i, f"{t[1]:.0f}", va="center", fontsize=8)
+    ax.set_title(PX["thr"], loc="left", fontsize=10); fig.tight_layout(); fig.savefig(f"{out}/perf_throughput.png", dpi=170); plt.close(fig)
+lat = [(cname.get(r["id"], r["id"]), [num(rf"{p} ([\d.]+) ms", r["detail"]) for p in ("p50", "p95", "p99")]) for r in perf if r["type"] == "latency"]
+lat = [l for l in lat if all(v is not None for v in l[1])]
+if lat:
+    fig, ax = plt.subplots(figsize=(7.2, 3.2)); w = 0.26
+    for i, (p, col) in enumerate(zip(("p50", "p95", "p99"), ("#16a34a", "#d97706", "#dc2626"))):
+        ax.bar([k + (i - 1) * w for k in range(len(lat))], [l[1][i] for l in lat], w, color=col, label=p)
+    ax.set_xticks(range(len(lat))); ax.set_xticklabels([l[0] for l in lat], fontsize=8); ax.legend(frameon=False)
+    ax.set_title(PX["lat"], loc="left", fontsize=10); fig.tight_layout(); fig.savefig(f"{out}/perf_latency.png", dpi=170); plt.close(fig)
+udp = [(re.search(r"\((\d+ B)", r["detail"]).group(1) if re.search(r"\((\d+ B)", r["detail"]) else r["id"], num(r"(\d+) packets/s", r["detail"]), num(r"loss ([\d.]+) %", r["detail"]))
+       for r in perf if r["type"] == "iperf" and "UDP" in r["detail"]]
+udp = [u for u in udp if u[1] is not None]
+if udp:
+    fig, ax = plt.subplots(figsize=(7.2, 3.2)); ax2 = ax.twinx()
+    ax.bar([u[0] for u in udp], [u[1] / 1000 for u in udp], color="#2563eb", width=0.5); ax.set_ylabel(PX["pps"], color="#2563eb")
+    ax2.plot([u[0] for u in udp], [u[2] or 0 for u in udp], "o-", color="#dc2626"); ax2.set_ylabel(PX["loss"], color="#dc2626"); ax2.spines["right"].set_visible(True)
+    ax.set_title(PX["udp"], loc="left", fontsize=10); fig.tight_layout(); fig.savefig(f"{out}/perf_udp.png", dpi=170); plt.close(fig)
+
+# ------------------------------------------------------------------ 7. high availability (control agent results)
+HX = {"en": dict(out="Longest continuous interruption per client during the HA events (s)", thr="threshold", tl="Replacement of a failed gateway (minutes)",
+                 ev=["Failure detected by the load balancer", "Replacement launched", "In service (group)", "Healthy target", "Registered with policy (management)", "Old object removed"]),
+      "es": dict(out="Interrupción continua más larga por cliente durante los eventos de HA (s)", thr="umbral", tl="Sustitución de un gateway caído (minutos)",
+                 ev=["El balanceador detecta el fallo", "Sustituto lanzado", "En servicio (grupo)", "Destino sano", "Registrado con política (gestión)", "Objeto antiguo retirado"])}[L]
+ENVN = {(e.get("name") or "").upper() for e in envs}
+ha = [r for r in res if r.get("case", "").startswith("HA-") and r.get("type") == "hook" and "interruption per client" in r.get("detail", "")]
+rows = []
+for r in ha:
+    part = re.split(r"interruption per client[^:]*:", r["detail"])[-1]
+    vals = {}
+    for m in re.finditer(r"([A-Z0-9_-]+): ([^;.]+)", part):
+        ns = [int(x) for x in re.findall(r"(\d+) s\b", m.group(2))]
+        if ns and m.group(1) in ENVN:
+            vals[m.group(1)] = max(ns)
+    if vals:
+        rows.append((r["case"], vals))
+if rows:
+    es_ = sorted({k for _, v in rows for k in v}); w = 0.8 / max(1, len(es_)); pal = ["#2563eb", "#16a34a", "#d97706", "#7c3aed", "#9ca3af", "#0891b2"]
+    fig, ax = plt.subplots(figsize=(7.6, 3.2))
+    for i, e in enumerate(es_):
+        ax.bar([k + (i - (len(es_) - 1) / 2) * w for k in range(len(rows))], [v.get(e, 0) for _, v in rows], w, color=pal[i % len(pal)], label=e)
+    lim = (cfg.get("ha") or {}).get("max_outage_s", 60)
+    ax.axhline(lim, color="#dc2626", ls="--", lw=1); ax.text(len(rows) - 0.55, lim + 1, f"{HX['thr']} {lim} s", color="#dc2626", fontsize=8, ha="right")
+    ax.set_xticks(range(len(rows))); ax.set_xticklabels([c_ for c_, _ in rows]); ax.legend(frameon=False, ncol=min(6, len(es_)), fontsize=8)
+    ax.set_title(HX["out"], loc="left", fontsize=10); fig.tight_layout(); fig.savefig(f"{out}/ha_outage.png", dpi=170); plt.close(fig)
+h1 = next((r["detail"] for r in res if r.get("case") == "HA-01" and r.get("type") == "hook"), "")
+ev = [(lbl, num(p, h1)) for lbl, p in zip(HX["ev"], (r"unhealthy \+(\d+) s", r"launched \+(\d+) s", r"in service \+(\d+) s", r"healthy target \+(\d+) s",
+                                                     r"management \+(\d+) s", r"removed \+(\d+) s"))]
+ev = [e for e in ev if e[1] is not None]
+if ev:
+    fig, ax = plt.subplots(figsize=(7.6, 2.8))
+    ax.barh([e[0] for e in ev][::-1], [e[1] / 60 for e in ev][::-1], color=["#dc2626", "#d97706", "#16a34a", "#2563eb", "#7c3aed", "#9ca3af"][:len(ev)][::-1])
+    for i, e in enumerate(ev[::-1]):
+        ax.text(e[1] / 60 + 0.05, i, f"{e[1] / 60:.1f}", va="center", fontsize=8)
+    ax.set_title(HX["tl"], loc="left", fontsize=10); fig.tight_layout(); fig.savefig(f"{out}/ha_timeline.png", dpi=170); plt.close(fig)
 print("ok")
