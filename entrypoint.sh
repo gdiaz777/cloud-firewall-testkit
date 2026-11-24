@@ -11,11 +11,13 @@ first_ip() { hostname -I | tr ' ' '\n' | grep -vE '^(172\.17\.|127\.)' | head -1
 case $ROLE in
 server)
   mkdir -p /run/testkit /data/certs /var/log/nginx
-  # Certificates: mounted in /opt/testkit/certs (testkit_ca.crt/.key) or generated once and kept in /data/certs
+  # Certificates: mounted in /opt/testkit/certs (testkit_ca.crt/.key) or generated once and kept in /data/certs.
+  # The CA name carries the creation time: firewalls look up the issuer by name, and two CAs with the same name but
+  # different keys (e.g. after recreating the data volume) make the newer server certificate look untrusted.
   if [ -s $C/testkit_ca.key ]; then D=$C; else D=/data/certs
     if [ ! -s $D/testkit_ca.key ]; then
       openssl req -x509 -newkey rsa:3072 -sha256 -days 3650 -nodes -keyout $D/testkit_ca.key -out $D/testkit_ca.crt \
-        -subj "/O=Firewall Testkit/CN=Firewall Testkit CA $(hostname -s)" -addext "basicConstraints=critical,CA:TRUE" -addext "keyUsage=critical,keyCertSign,cRLSign" 2>/dev/null
+        -subj "/O=Firewall Testkit/CN=Firewall Testkit CA $(hostname -s) $(date -u +%Y%m%d%H%M%S)" -addext "basicConstraints=critical,CA:TRUE" -addext "keyUsage=critical,keyCertSign,cRLSign" 2>/dev/null
       openssl req -newkey rsa:2048 -nodes -keyout $D/client.key -out /run/testkit/client.csr -subj "/O=Firewall Testkit/CN=testkit-client" 2>/dev/null
       openssl x509 -req -in /run/testkit/client.csr -CA $D/testkit_ca.crt -CAkey $D/testkit_ca.key -CAcreateserial -CAserial /run/testkit/ca.srl \
         -days 1825 -sha256 -out $D/client.crt -extfile <(printf "extendedKeyUsage=clientAuth") 2>/dev/null

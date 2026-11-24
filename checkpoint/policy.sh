@@ -133,6 +133,15 @@ else
   BODY=$(grep -v -- '-----' "$OUT/testkit_ca.crt" | tr -d '\n\r ')
   if cp show-custom-trusted-ca-certificates '{"limit":500,"details-level":"full"}' | jq -e --arg b "$BODY" '[.objects[]?|select((."base64-certificate"//"")|gsub("-----[A-Z ]+-----|\\s";"")==$b)]|length>0' >/dev/null; then ok "testkit CA already trusted"
   else api add-custom-trusted-ca-certificate "$(jq -nc --arg c "$(base64 -w0 < "$OUT/testkit_ca.crt")" '{"base64-certificate":$c}')"; fi
+  # Older testkit CAs with the same subject but another key (server reinstalled) must go: the gateway picks the issuer
+  # by name and would validate the server certificate against the wrong key ("Untrusted Certificate").
+  SUBJ=$(openssl x509 -in "$OUT/testkit_ca.crt" -noout -subject -nameopt RFC2253 | sed 's/^subject=//')
+  cp show-custom-trusted-ca-certificates '{"limit":500,"details-level":"full"}' \
+    | jq -r --arg b "$BODY" '.objects[]?|select((."issued-to"//"")|test("Firewall Testkit CA"))|{u:.uid, c:((."base64-certificate"//"")|gsub("-----[A-Z ]+-----|\\s";""))}|select(.c!=$b)|"\(.u) \(.c)"' \
+    | while read -r uid der; do
+        s=$(printf '%s' "$der" | base64 -d 2>/dev/null | openssl x509 -inform DER -noout -subject -nameopt RFC2253 2>/dev/null | sed 's/^subject=//')
+        [ "$s" = "$SUBJ" ] && { warn "removing an older trusted testkit CA with the same name ($SUBJ)"; api delete-custom-trusted-ca-certificate "{\"uid\":\"$uid\"}"; }
+      done
 fi
 exists https-layer "$HL" || api add-https-layer "{\"name\":\"$HL\",\"shared\":false,$TAGS}"
 HRB() { cp show-https-rulebase "{\"name\":\"$HL\",\"limit\":100}" | jq -c '[.rulebase[] | if .type=="https-section" then .rulebase[] else . end]'; }

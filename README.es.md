@@ -50,6 +50,14 @@ docker run -d --name testkit-client --network host --cap-add NET_RAW --cap-add N
   -e SERVER=<IP de workload del servidor> -e TESTKIT_ENV=<nombre del entorno> ghcr.io/gdiaz777/cloud-firewall-testkit:latest client
 ```
 
+En cada equipo cliente **salvo el del servidor de pruebas**, arranca también el servidor sin portal: los demás entornos
+lo usan como destino (par de otra AZ, destino IDS, alcance este-oeste entre entornos):
+
+```bash
+docker run -d --name testkit-target --network host -e PORTAL=0 -e SERVER_IP=<IP de workload de este equipo> \
+  -v testkit-data:/data ghcr.io/gdiaz777/cloud-firewall-testkit:latest server
+```
+
 Abre `http://<IP del servidor>/portal/` (desde un equipo de administración: la dirección que alcances) → **Configuración**:
 
 1. **Solución probada**: nombre y fabricante (etiqueta ejecuciones e informes; con Check Point se muestran sus notas y
