@@ -78,10 +78,10 @@ class AWS:
         a["hc"] = f"health check {t.get('HealthCheckProtocol')}/{t.get('HealthCheckPort')} every {t.get('HealthCheckIntervalSeconds')} s, unhealthy after {t.get('UnhealthyThresholdCount')}"
         return a
 
-    def suspend(self, procs=("HealthCheck", "ReplaceUnhealthy", "AZRebalance")):
+    def suspend(self, procs=("HealthCheck", "ReplaceUnhealthy", "AZRebalance", "AlarmNotification")):
         self.asc.suspend_processes(AutoScalingGroupName=self.asg_name, ScalingProcesses=list(procs))
 
-    def resume(self, procs=("HealthCheck", "ReplaceUnhealthy", "AZRebalance")):
+    def resume(self, procs=("HealthCheck", "ReplaceUnhealthy", "AZRebalance", "AlarmNotification")):
         self.asc.resume_processes(AutoScalingGroupName=self.asg_name, ScalingProcesses=list(procs))
 
     def isolate(self, targets):
@@ -140,7 +140,8 @@ def post_provision(ctx, name, t0):
         return ""
     t = time.time(); env = dict(os.environ, TK_GATEWAY=name or "", TK_SINCE=str(int(t0)))
     p = subprocess.run(cmd, shell=True, env=env, capture_output=True, text=True, timeout=3600)
-    return f"; post-provisioning step: {'OK' if p.returncode == 0 else 'rc=' + str(p.returncode)} in {round(time.time() - t)} s"
+    why = "" if p.returncode == 0 else " (" + re.sub(r"\x1b\[[0-9;]*m|\s+", " ", (p.stderr or p.stdout))[-160:].strip() + ")"
+    return f"; post-provisioning step: {'OK' if p.returncode == 0 else 'rc=' + str(p.returncode)} in {round(time.time() - t)} s{why}"
 
 
 def wait_new_member(a, ctx, before, t0, timeout, ev):
@@ -395,6 +396,7 @@ def scale_out(c, ctx):
     pols = "; ".join(f"{p['PolicyName'].split('-')[-1] or p['PolicyName']}: {p.get('ScalingAdjustment', p.get('TargetTrackingConfiguration', {}).get('TargetValue', ''))}" for p in pol)
     ids = ctx.start_probes(duration=2 * timeout + 900); time.sleep(30)
     ev, new = {}, None
+    a.suspend(("AlarmNotification", "AZRebalance"))   # the CPU scaling alarms must not add/remove members during the test
     try:
         if n0 + 1 > max0:
             a.asc.update_auto_scaling_group(AutoScalingGroupName=a.asg_name, MaxSize=n0 + 1)
@@ -421,6 +423,7 @@ def scale_out(c, ctx):
                 break
             time.sleep(15)
     finally:
+        a.resume(("AlarmNotification", "AZRebalance"))
         a.asc.set_instance_protection(AutoScalingGroupName=a.asg_name, InstanceIds=list(before), ProtectedFromScaleIn=False)
         if a.asg()["DesiredCapacity"] != n0:
             a.asc.set_desired_capacity(AutoScalingGroupName=a.asg_name, DesiredCapacity=n0, HonorCooldown=False)
