@@ -545,17 +545,29 @@ def t_cps(c, cfg):
     import asyncio
     host, port, secs, conc = subst(c.get("host", "{SERVER}"), cfg), int(c.get("port", 80)), int(c.get("seconds", 20)), int(c.get("concurrency", 64))
     lat, err = [], [0]
-    req = b"GET /index.html HTTP/1.1\r\nHost: testkit\r\nConnection: close\r\n\r\n"
+    # The client closes first (like a browser or API client): TIME_WAIT stays on the client, which then never reuses
+    # a 5-tuple the firewall still tracks as closing (a server-side close would make that happen and drop SYNs).
+    req = b"GET /index.html HTTP/1.1\r\nHost: testkit\r\n\r\n"
+
+    async def one(r, w):
+        w.write(req); await w.drain()
+        hdr = await r.readuntil(b"\r\n\r\n")
+        m = re.search(rb"Content-Length: (\d+)", hdr, re.I)
+        if m:
+            await r.readexactly(int(m.group(1)))
 
     async def worker(stop):
         while time.time() < stop:
-            t0 = time.perf_counter()
+            t0 = time.perf_counter(); w = None
             try:
                 r, w = await asyncio.wait_for(asyncio.open_connection(host, port, local_addr=(SRC, 0)), 3)
-                w.write(req); await w.drain(); await asyncio.wait_for(r.read(), 3); w.close()
+                await asyncio.wait_for(one(r, w), 3)
                 lat.append((time.perf_counter() - t0) * 1000)
-            except (OSError, asyncio.TimeoutError):
+            except (OSError, asyncio.TimeoutError, asyncio.IncompleteReadError, asyncio.LimitOverrunError):
                 err[0] += 1
+            finally:
+                if w:
+                    w.close()
 
     async def main():
         stop = time.time() + secs
