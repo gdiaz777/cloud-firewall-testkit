@@ -395,7 +395,11 @@ def fail_closed(c, ctx):
 # ------------------------------------------------------------------ HA-05
 @hook("aws.scale_out")
 def scale_out(c, ctx):
-    a = AWS(ctx); g = a.asg(); n0, max0 = g["DesiredCapacity"], g["MaxSize"]; before = {i["InstanceId"] for i in g["Instances"]}
+    a = AWS(ctx); g = a.asg()
+    t_w = time.time()   # settle first: a scaling activity in progress (e.g. after a load test) would mix with the test
+    while time.time() - t_w < 900 and (any(i["LifecycleState"] != "InService" for i in g["Instances"]) or len(g["Instances"]) != g["DesiredCapacity"]):
+        time.sleep(15); g = a.asg()
+    n0, max0 = g["DesiredCapacity"], g["MaxSize"]; before = {i["InstanceId"] for i in g["Instances"] if i["LifecycleState"] == "InService"}
     timeout, max_out = ctx.setting("ha.provision_timeout_s", 2700), ctx.setting("ha.max_outage_s", 60)
     pol = a.asc.describe_policies(AutoScalingGroupName=a.asg_name)["ScalingPolicies"]
     pols = "; ".join(f"{p['PolicyName'].split('-')[-1] or p['PolicyName']}: {p.get('ScalingAdjustment', p.get('TargetTrackingConfiguration', {}).get('TargetValue', ''))}" for p in pol)
