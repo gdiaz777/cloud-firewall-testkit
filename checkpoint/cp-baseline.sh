@@ -74,6 +74,7 @@ remove)
   for p in TK_EastWest TK_Strict TK_Detect; do api delete-threat-profile "{\"name\":\"$p\"}"; done
   for s in TK_Blocked_FQDN TK_Blocked_Path TK_NoDecrypt; do api delete-application-site "{\"name\":\"$s\"}"; done
   for s in TK_exception_port TK_http_sig TK_https_sig; do api delete-service-tcp "{\"name\":\"$s\"}"; done
+  api delete-service-udp "{\"name\":\"TK_exception_port_udp\"}"
   api delete-group '{"name":"TK_Envs"}'
   for n in $(cp show-objects '{"type":"network","filter":"TK_","limit":200}' | jq -r '.objects[]?.name|select(startswith("TK_"))'); do api delete-network "{\"name\":\"$n\",\"ignore-warnings\":true}"; done
   publish; cp_logout;;
