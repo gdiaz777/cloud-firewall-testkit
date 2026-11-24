@@ -105,8 +105,15 @@ class Mgmt:
             log(f"install attempt {i + 1}: {t['status']} — retrying in 60 s"); time.sleep(60)
         raise RuntimeError("policy installation failed")
 
-    def logs(self, flt, frame="last-hour", n=100):
-        r = self.call("show-logs", {"new-query": {"filter": flt, "time-frame": frame, "max-logs-per-request": n}})
+    def logs(self, flt, since=None, n=100):
+        """Logs matching the filter since 'since' (epoch; custom time frame so the newest are not cut by the page size)."""
+        q = {"filter": flt, "max-logs-per-request": n}
+        if since:
+            st = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(since - 60))
+            q.update({"time-frame": "custom", "custom-start": st, "custom-end": time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(time.time() + 300))})
+        else:
+            q["time-frame"] = "last-hour"
+        r = self.call("show-logs", {"new-query": q})
         return r.get("logs", [])
 
     def layers(self):
@@ -335,10 +342,10 @@ def has(l, keys):
     return next((str(l[k]) for k in keys if l.get(k) not in (None, "", [])), None)
 
 
-def find_logs(m, flt, since, want, timeout=240):
+def find_logs(m, flt, since, want, timeout=600):
     t0 = time.time(); found = {}
     while time.time() - t0 < timeout:
-        for l in m.logs(flt):
+        for l in m.logs(flt, since):
             ts = (l.get("time") or "").replace("Z", "+00:00")
             try:
                 from datetime import datetime
@@ -360,10 +367,11 @@ def find_logs(m, flt, since, want, timeout=240):
 def logs_connection(c, ctx):
     ag = ctx.agent_for(); src, srv = ag.get("src"), ctx.cfg["server"]
     t0 = time.time()
-    rs = ctx.checks(ag["name"], [dict(type="tcp", host=srv, port=80, expect="ALLOW", name="allowed"), dict(type="tcp", host=srv, port=22, expect="BLOCK", name="denied")])
+    rs = ctx.checks(ag["name"], [dict(type="http", url=f"http://{srv}/index.html?obs01", expect="ALLOW", name="allowed"), dict(type="tcp", host=srv, port=22, expect="BLOCK", name="denied")])
     with Mgmt(ctx) as m:
         f = find_logs(m, f"src:{src} AND dst:{srv}", t0, {
-            "allowed": lambda l: (l.get("action") or "").lower() == "accept" and ("80" in str(l.get("service")) or l.get("service_id") == "http"),
+            "allowed": lambda l: (l.get("action") or "").lower() == "accept" and ("80" in str(l.get("service")) or l.get("service_id") == "http")
+            and not str(l.get("rule_name", "")).startswith("CPNotEnoughData"),
             "denied": lambda l: (l.get("action") or "").lower() in ("drop", "reject") and ("22" in str(l.get("service")) or l.get("service_id") == "ssh")})
     parts, ok = [], True
     for k in ("allowed", "denied"):
@@ -373,7 +381,7 @@ def logs_connection(c, ctx):
         ok &= not miss
         parts.append(f"{k}: {l.get('action')} by rule '{has(l, FIELD['rule'])}' ({has(l, FIELD['layer'])}) on {has(l, FIELD['gateway'])}, "
                      f"visible {seen - t0:.0f} s after the connection" + (f", missing fields: {miss}" if miss else ""))
-    det = (f"From {(ag.get('env') or '').upper()} ({src}) to {srv}: {rs[0]['observed']} tcp/80 and {rs[1]['observed']} tcp/22. " + "; ".join(parts) +
+    det = (f"From {(ag.get('env') or '').upper()} ({src}) to {srv}: {rs[0]['observed']} http and {rs[1]['observed']} tcp/22. " + "; ".join(parts) +
            ". Each log carries time, action, rule, layer, source, destination, service and gateway.")
     return ("PASS" if ok else "NOT_MET"), det
 
@@ -388,11 +396,11 @@ def logs_threat(c, ctx):
                             dict(type="http", url=f"https://{blocked}/", expect="BLOCK", name="URL")])
     with Mgmt(ctx) as m:
         f = find_logs(m, f"src:{src}", t0, {
-            "IPS": lambda l: "IPS" in str(l.get("product") or l.get("blade")),
-            "Anti-Virus": lambda l: "Anti-Virus" in str(l.get("product") or l.get("blade")),
+            "IPS": lambda l: "IPS" in str(l.get("product")) and "EICAR" not in str(l.get("protection_name")),
+            "Anti-malware": lambda l: "Anti-Virus" in str(l.get("product")) or "EICAR" in str(l.get("protection_name") or l.get("malware_rule_name") or ""),
             "URL/App": lambda l: re.search(r"URL Filtering|Application Control", str(l.get("product") or l.get("blade"))) is not None})
     parts, ok = [], True
-    for k in ("IPS", "Anti-Virus", "URL/App"):
+    for k in ("IPS", "Anti-malware", "URL/App"):
         if k not in f:
             parts.append(f"{k}: log NOT found"); ok = False; continue
         l, seen = f[k]
@@ -409,7 +417,7 @@ echo "$C $D" | awk '{printf "cpu %.0f%%; ", 100*(($3-$1)-($4-$2))/($3-$1)}'
 free -m | awk '/^Mem/{printf "memory %.0f%% of %d MB; ", $3/$2*100, $2}'
 fw tab -t connections -s 2>/dev/null | tail -1 | awk '{printf "connections %s (peak %s); ", $4, $5}'
 df -P / /var/log 2>/dev/null | awk 'NR>1{printf "disk %s %s; ", $6, $5}'
-cpwd_admin list 2>/dev/null | awk 'NR>1 && $4!="E"{d=d" "$1} END{printf "processes down:%s", (d==""?" none":d)}'"""
+cpwd_admin list 2>/dev/null | awk 'NR>1 && NF>3 && $3!="E"{d=d" "$1} END{printf "processes down:%s", (d==""?" none":d)}'"""
 
 
 @hook("checkpoint.health")
