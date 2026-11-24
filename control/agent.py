@@ -88,7 +88,17 @@ class Ctx:
         return ags[0]
 
     def task(self, agent, kind, params):
-        return _req("/api/tasks", dict(agent=agent, task=dict(kind=kind, params=params)))["id"]
+        """Queues a task and makes sure the agent took it: a job handed over on a long poll that the firewall cuts
+        (e.g. during a policy installation or a failover) is lost, so a task still queued after 45 s is sent again."""
+        for _ in range(5):
+            tid = _req("/api/tasks", dict(agent=agent, task=dict(kind=kind, params=params)))["id"]
+            t0 = time.time()
+            while time.time() - t0 < 45:
+                if _req(f"/api/tasks/{tid}").get("status") != "queued":
+                    return tid
+                time.sleep(3)
+            log(f"task {kind} for {agent} not taken in 45 s: sending it again"); self.stop(tid)
+        raise RuntimeError(f"agent {agent} does not take tasks")
 
     def wait(self, tid, timeout=900):
         t0 = time.time()

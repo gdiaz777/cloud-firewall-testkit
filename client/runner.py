@@ -811,6 +811,7 @@ def agent():
                             return bool(call("/api/agent/task_state", dict(task_id=tid, agent=name)).get("stop"))
                         except Exception:  # noqa  (portal unreachable during a failover: keep going)
                             return False
+                    stopped()   # tells the portal the task was taken (status running)
                     try:
                         res = dict(ok=True, result=run_task(job["task"], cfg, stopped))
                     except Exception as e:  # noqa
