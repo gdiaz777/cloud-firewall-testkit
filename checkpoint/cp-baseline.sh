@@ -53,16 +53,21 @@ install)
   if [ "${1:-}" = --prefix ]; then T=$(cp show-simple-gateways '{"limit":200}' | jq -c --arg p "$2" '[.objects[].name|select(startswith($p))]')
   else T=$(printf '%s\n' "$@" | jq -Rcs 'split("\n")|map(select(length>0))'); fi
   [ "$T" != "[]" ] || die "no gateways given"
-  CUR=$(cp show-package "{\"name\":\"$PKG\"}" | jq -c '."installation-targets" | if type=="array" then map(.name) else . end')
-  if [ "$CUR" != '"all"' ]; then MISS=$(jq -c --argjson c "$CUR" '[.[]|select(. as $g|$c|index($g)|not)]' <<<"$T")
-    [ "$MISS" != "[]" ] && { api set-package "{\"name\":\"$PKG\",\"installation-targets\":{\"add\":$MISS}}" && publish; }; fi
+  # The package must list the gateways as installation targets. CME rewrites that list while it provisions gateways,
+  # so it is checked again before every attempt.
+  targets() { local cur miss; cur=$(cp show-package "{\"name\":\"$PKG\"}" | jq -c '."installation-targets" | if type=="array" then map(.name) else . end')
+    [ "$cur" = '"all"' ] && return 0
+    miss=$(jq -c --argjson c "$cur" '[.[]|select(. as $g|$c|index($g)|not)]' <<<"$T")
+    [ "$miss" != "[]" ] && { api set-package "{\"name\":\"$PKG\",\"installation-targets\":{\"add\":$miss}}" && publish; }; return 0; }
   for what in access threat-prevention; do
     log "Install $PKG ($what) on $(jq -r 'join(", ")' <<<"$T")"
     body=$(jq -nc --arg p "$PKG" --argjson t "$T" --arg w "$what" '{"policy-package":$p, access:($w=="access"), "threat-prevention":($w=="threat-prevention"), targets:$t}')
-    for try in $(seq 1 10); do   # another install in progress (e.g. CME) makes it fail: retry
-      r=$(cp install-policy "$body"); tid=$(jq -r '."task-id" // empty' <<<"$r"); [ -n "$tid" ] || die "install: $(jq -r .message <<<"$r")"
-      s=$(wait_task "$tid" 1200); [ "$s" = succeeded ] && { ok "$s"; break; }
-      [ "$try" -lt 10 ] || die "install $what: $s"; warn "attempt $try: $s — retrying in 60 s"; sleep 60
+    for try in $(seq 1 10); do   # another install in progress or targets changed (e.g. CME): retry
+      targets
+      r=$(cp install-policy "$body"); tid=$(jq -r '."task-id" // empty' <<<"$r")
+      if [ -n "$tid" ]; then s=$(wait_task "$tid" 1200); [ "$s" = succeeded ] && { ok "$s"; break; }
+      else s=$(jq -r .message <<<"$r"); fi
+      [ "$try" -lt 10 ] || die "install $what: $s"; warn "attempt $try: ${s:0:160} — retrying in 60 s"; sleep 60
     done
   done; cp_logout;;
 
