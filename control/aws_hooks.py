@@ -37,7 +37,10 @@ class AWS:
         self.asg_name = ctx.setting("aws.asg_name")
         if not self.region:
             raise Skip("not configured: aws.region")
-        self.c = lambda svc, region=None: boto3.client(svc, region_name=region or self.region)
+        # A new session per check: boto3's default session caches the first credentials it finds, so renewed
+        # temporary credentials (env_file) would never be used.
+        self.session = boto3.session.Session()
+        self.c = lambda svc, region=None: self.session.client(svc, region_name=region or self.region)
         self.ec2, self.asc, self.elb, self.cw = self.c("ec2"), self.c("autoscaling"), self.c("elbv2"), self.c("cloudwatch")
 
     # ---------------------------------------------------------------- firewall tier
@@ -452,7 +455,7 @@ def scale_out(c, ctx):
 # ------------------------------------------------------------------ PERF-08
 def ec2_price(a, itype):
     try:
-        pr = boto3.client("pricing", region_name="us-east-1")
+        pr = a.c("pricing", "us-east-1")
         f = [{"Type": "TERM_MATCH", "Field": k, "Value": v} for k, v in [("instanceType", itype), ("regionCode", a.region), ("operatingSystem", "Linux"),
                                                                            ("tenancy", "Shared"), ("preInstalledSw", "NA"), ("capacitystatus", "Used")]]
         for p in pr.get_products(ServiceCode="AmazonEC2", Filters=f, MaxResults=5)["PriceList"]:
