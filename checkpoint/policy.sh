@@ -31,6 +31,12 @@ done
 ENVS_JSON=$(lab -c '[.environments[].name|"TK_"+.]')
 exists group TK_Envs && api set-group "{\"name\":\"TK_Envs\",\"members\":$ENVS_JSON}" || api add-group "{\"name\":\"TK_Envs\",\"members\":$ENVS_JSON,$TAGS}"
 exists network TK_Internal || api add-network "{\"name\":\"TK_Internal\",\"subnet\":\"${INTERNAL%/*}\",\"mask-length\":${INTERNAL#*/},\"ignore-warnings\":true,$TAGS}"
+# Infrastructure the workloads (and gateways) use inside their own network: the VPC DNS resolver (base + 2, any private
+# range) and Amazon DNS / NTP / metadata (169.254.169.x). It must never fall into the isolation or cleanup rules.
+exists network TK_Link_Local || api add-network "{\"name\":\"TK_Link_Local\",\"subnet\":\"169.254.169.0\",\"mask-length\":24,\"ignore-warnings\":true,$TAGS}"
+exists network TK_Private_172 || api add-network "{\"name\":\"TK_Private_172\",\"subnet\":\"172.16.0.0\",\"mask-length\":12,\"ignore-warnings\":true,$TAGS}"
+exists network TK_Private_192 || api add-network "{\"name\":\"TK_Private_192\",\"subnet\":\"192.168.0.0\",\"mask-length\":16,\"ignore-warnings\":true,$TAGS}"
+exists group TK_Private || api add-group "{\"name\":\"TK_Private\",\"members\":[\"TK_Internal\",\"TK_Private_172\",\"TK_Private_192\"],$TAGS}"
 P=$(lab '.internet.exception_port // 5201')
 exists service-tcp TK_exception_port || api add-service-tcp "{\"name\":\"TK_exception_port\",\"port\":\"$P\",\"ignore-warnings\":true,$TAGS}"
 # UDP on the same port: iperf3 UDP measurements (PERF-07)
@@ -63,6 +69,7 @@ AR() { local n; n=$(jq -r .name <<<"$2"); rule_exists access "$1" "$n" && return
 HTTPS2='["http","https"]'
 D=$(role dlp_exception_client)
 [ -n "$D" ] && [ -n "$SRV" ] && AR "$NETL" "{\"name\":\"TK DLP exception $D -> $SRV\",\"source\":[\"TK_$D\"],\"destination\":[\"TK_$SRV\"],\"service\":$HTTPS2,\"content\":[\"PCI - Credit Card Numbers\",\"International Bank Account Number - IBAN\"],\"content-direction\":\"up\",\"action\":\"Accept\",\"track\":{\"type\":\"Log\"}}"
+AR "$NETL" '{"name":"TK infrastructure - DNS and NTP","source":["Any"],"destination":["TK_Private","TK_Link_Local"],"service":["domain-udp","domain-tcp","ntp-udp"],"action":"Accept","track":{"type":"None"}}'
 AR "$NETL" "{\"name\":\"TK CA - block card numbers and IBAN\",\"source\":[\"TK_Envs\"],\"destination\":[\"TK_Envs\"],\"service\":$HTTPS2,\"content\":[\"PCI - Credit Card Numbers\",\"International Bank Account Number - IBAN\"],\"content-direction\":\"any\",\"action\":\"Drop\",\"track\":{\"type\":\"Log\"}}"
 AR "$NETL" "{\"name\":\"TK CA - block executables\",\"source\":[\"TK_Envs\"],\"destination\":[\"TK_Envs\"],\"service\":$HTTPS2,\"content\":[\"Executable File\"],\"content-direction\":\"any\",\"action\":\"Drop\",\"track\":{\"type\":\"Log\"}}"
 ALW=$(lab -c '[.segmentation.always[]?]'); if [ "$ALW" != "[]" ]; then
@@ -75,6 +82,11 @@ for pair in $(lab -r '.segmentation.allow | keys[]'); do
   s=${pair%>*}; d=${pair#*>}
   S=$(lab -r --arg p "$pair" '.segmentation.allow[$p][]' | while read -r x; do svc "$x"; done | jq -Rcs 'split("\n")|map(select(length>0))')
   AR "$NETL" "{\"name\":\"TK allow $s -> $d\",\"source\":[\"TK_$s\"],\"destination\":[\"TK_$d\"],\"service\":$S,\"action\":\"Accept\",\"track\":{\"type\":\"Log\"}}"
+done
+# Traffic inside one environment is not traffic between environments (in a hub-and-spoke lab it never reaches the
+# firewall, but where the gateways sit in the same network as the workloads it does): accept it before the isolation
+for e in $(lab '.environments[].name'); do
+  AR "$NETL" "{\"name\":\"TK same environment $e\",\"source\":[\"TK_$e\"],\"destination\":[\"TK_$e\"],\"service\":[\"Any\"],\"action\":\"Accept\",\"track\":{\"type\":\"Log\"}}"
 done
 AR "$NETL" '{"name":"TK isolation - rest between environments","source":["TK_Envs"],"destination":["TK_Envs"],"service":["Any"],"action":"Drop","track":{"type":"Log"}}'
 AR "$NETL" "{\"name\":\"TK environments -> Internet\",\"source\":[\"TK_Envs\"],\"destination\":[\"TK_Internal\"],\"destination-negate\":true,\"service\":[\"Any\"],\"action\":\"Apply Layer\",\"inline-layer\":\"$IL\",\"track\":{\"type\":\"None\"}}"
@@ -179,10 +191,12 @@ sections() { local kind=$1 layer=$2; shift 2; local -a items=("$@") secs=() i cu
     jq -e .code >/dev/null <<<"$r" && warn "$x: $(jq -r .message <<<"$r" | head -c 160)"
   done; ok "$layer: ${#secs[@]} sections"; }
 PAIRS=(); for pair in $(lab -r '.segmentation.allow | keys[]'); do PAIRS+=("TK allow ${pair%>*} -> ${pair#*>}"); done
+SAME=(); for e in $(lab '.environments[].name'); do SAME+=("TK same environment $e"); done
 sections access "$NETL" \
+  "§TK · Infrastructure" "TK infrastructure - DNS and NTP" \
   "§TK · Data loss prevention" "TK DLP exception $D -> $SRV" "TK CA - block card numbers and IBAN" "TK CA - block executables" \
   "§TK · Segmentation exceptions" "TK exception - between all environments" \
-  "§TK · Segmentation matrix" "${PAIRS[@]}" "TK isolation - rest between environments" \
+  "§TK · Segmentation matrix" "${SAME[@]}" "${PAIRS[@]}" "TK isolation - rest between environments" \
   "§TK · Internet egress" "TK environments -> Internet" \
   "§TK · Cleanup" "Cleanup rule"
 sections access "$IL" \
