@@ -187,4 +187,77 @@ if ev:
     for i, e in enumerate(ev[::-1]):
         ax.text(e[1] / 60 + 0.05, i, f"{e[1] / 60:.1f}", va="center", fontsize=8)
     ax.set_title(HX["tl"], loc="left", fontsize=10); fig.tight_layout(); fig.savefig(f"{out}/ha_timeline.png", dpi=170); plt.close(fig)
+
+# HA-05: scale-out and scale-in times
+SX = {"en": dict(t="Horizontal scaling (minutes since the request)", o="Scale out", i="Scale in",
+                 eo=["Instance launched", "In service (group)", "Registered with policy (management)", "Healthy target"],
+                 ei=["Target deregistered", "Instance terminated", "Object removed (management)"]),
+      "es": dict(t="Escalado horizontal (minutos desde la petición)", o="Escalado hacia arriba", i="Escalado hacia abajo",
+                 eo=["Instancia lanzada", "En servicio (grupo)", "Registrado con política (gestión)", "Destino sano"],
+                 ei=["Destino desregistrado", "Instancia terminada", "Objeto retirado (gestión)"])}[L]
+h5 = next((r["detail"] for r in res if r.get("case") == "HA-05" and r.get("type") == "hook"), "")
+so, si = (h5.split("Scale in", 1) + [""])[:2]
+eo = [(l_, num(p_, so)) for l_, p_ in zip(SX["eo"], (r"launched \+(\d+) s", r"in service \+(\d+) s", r"management \+(\d+) s", r"healthy target \+(\d+) s"))]
+ei = [(l_, num(p_, si)) for l_, p_ in zip(SX["ei"], (r"deregistered \+(\d+) s", r"terminated \+(\d+) s", r"removed from the management \+(\d+) s"))]
+eo = [e for e in eo if e[1] is not None]; ei = [e for e in ei if e[1] is not None]
+if eo or ei:
+    fig, axs = plt.subplots(2, 1, figsize=(7.6, 0.42 * (len(eo) + len(ei)) + 1.6), sharex=True,
+                            gridspec_kw={"height_ratios": [max(1, len(eo)), max(1, len(ei))]})
+    for ax, evs, title, cols in ((axs[0], eo, SX["o"], ["#d97706", "#16a34a", "#7c3aed", "#2563eb"]), (axs[1], ei, SX["i"], ["#2563eb", "#dc2626", "#9ca3af"])):
+        if evs:
+            ax.barh([e[0] for e in evs][::-1], [e[1] / 60 for e in evs][::-1], color=cols[:len(evs)][::-1])
+            for k, e in enumerate(evs[::-1]):
+                ax.text(e[1] / 60 + 0.05, k, f"{e[1] / 60:.1f}", va="center", fontsize=8)
+        ax.set_title(title, loc="left", fontsize=9, color="#374151")
+    fig.suptitle(SX["t"], x=0.02, ha="left", fontsize=10); fig.tight_layout(); fig.savefig(f"{out}/ha_scale.png", dpi=170); plt.close(fig)
+
+# PERF-05/06: new connections per second and request time; PERF-04: concurrent sessions; PERF-08: CPU under load
+CX = {"en": dict(cps="New connections per second", rt="Request time (ms)", conc="concurrency", ses="Concurrent sessions",
+                 so="opened", sa="answered", sl="alive after idle", cpu="Gateway CPU during the load (%)", avg="average", mx="maximum", cw="CloudWatch max (1 min)"),
+      "es": dict(cps="Conexiones nuevas por segundo", rt="Tiempo de petición (ms)", conc="concurrencia", ses="Sesiones simultáneas",
+                 so="abiertas", sa="respondidas", sl="vivas tras la espera", cpu="CPU de los gateways durante la carga (%)", avg="media", mx="máxima", cw="máx. CloudWatch (1 min)")}[L]
+cps = [(cname.get(r["id"], r["id"]), num(r"(\d+) new connections/s", r["detail"]), num(r"concurrency (\d+)", r["detail"]),
+        [num(rf"{p_} ([\d.]+) ms", r["detail"]) for p_ in ("p50", "p95", "p99")]) for r in perf if r["type"] == "cps"]
+cps = [c_ for c_ in cps if c_[1]]
+if cps:
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(9.6, 3.0), gridspec_kw={"width_ratios": [1, 1.3]})
+    lbl = [f"{c_[0]}" for c_ in cps]
+    a1.barh(lbl[::-1], [c_[1] for c_ in cps][::-1], color="#2563eb")
+    for k, c_ in enumerate(cps[::-1]):
+        a1.text(c_[1] * 1.01, k, f"{c_[1]:.0f}/s" + (f" ({CX['conc']} {c_[2]:.0f})" if c_[2] else ""), va="center", fontsize=8)
+    a1.set_xlim(0, max(c_[1] for c_ in cps) * 1.6); a1.set_title(CX["cps"], loc="left", fontsize=10); a1.tick_params(axis="y", labelsize=8)
+    w = 0.26
+    for i, (p_, col) in enumerate(zip(("p50", "p95", "p99"), ("#16a34a", "#d97706", "#dc2626"))):
+        a2.bar([k + (i - 1) * w for k in range(len(cps))], [(c_[3][i] or 0) for c_ in cps], w, color=col, label=p_)
+    a2.set_xticks(range(len(cps))); a2.set_xticklabels([f"{c_[1]:.0f}/s" for c_ in cps], fontsize=8); a2.legend(frameon=False, fontsize=8)
+    a2.set_title(CX["rt"], loc="left", fontsize=10)
+    fig.tight_layout(); fig.savefig(f"{out}/perf_cps.png", dpi=170); plt.close(fig)
+ses = next((r for r in perf if r["type"] == "concurrent"), None)
+if ses:
+    m = re.search(r"(\d+)/(\d+) sessions open.*?(\d+) answered, (\d+) still alive after (\d+) s", ses["detail"])
+    if m:
+        got, n_, ans, alive, idle = (int(x) for x in m.groups())
+        fig, ax = plt.subplots(figsize=(6.4, 2.0))
+        vals = [(CX["so"], got), (CX["sa"], ans), (f"{CX['sl']} ({idle} s)", alive)]
+        ax.barh([v[0] for v in vals][::-1], [v[1] for v in vals][::-1], color=["#2563eb", "#16a34a", "#7c3aed"][::-1])
+        ax.axvline(n_, color="#6b7280", ls="--", lw=1)
+        for k, v in enumerate(vals[::-1]):
+            ax.text(v[1] * 0.98, k, f"{v[1]}/{n_}", va="center", ha="right", fontsize=8, color="white", weight="bold")
+        ax.set_title(CX["ses"], loc="left", fontsize=10)
+        fig.tight_layout(); fig.savefig(f"{out}/perf_sessions.png", dpi=170); plt.close(fig)
+p8 = next((r["detail"] for r in res if r.get("case") == "PERF-08" and r.get("type") == "hook"), "")
+gws = re.findall(r"([\w.-]+): CPU avg (\d+) %, max (\d+) %", p8)
+if gws:
+    cwm = {k: int(v) for k, v in re.findall(r"(i-[0-9a-f]+) max (\d+) %", p8.split("CloudWatch", 1)[-1])}
+    short = [re.search(r"(i-[0-9a-f]+)", g[0]).group(1) if re.search(r"(i-[0-9a-f]+)", g[0]) else g[0] for g in gws]
+    fig, ax = plt.subplots(figsize=(7.2, 2.9)); w = 0.36; xs = range(len(gws))
+    ax.bar([x - w / 2 for x in xs], [int(g[1]) for g in gws], w, color="#2563eb", label=CX["avg"])
+    ax.bar([x + w / 2 for x in xs], [int(g[2]) for g in gws], w, color="#dc2626", label=CX["mx"])
+    cwv = [cwm.get(s_) for s_ in short]
+    if any(v is not None for v in cwv):
+        ax.scatter([x + w / 2 for x, v in zip(xs, cwv) if v is not None], [v for v in cwv if v is not None], marker="_", s=600, color="#111827", label=CX["cw"], zorder=3)
+    for x, g in zip(xs, gws):
+        ax.text(x - w / 2, int(g[1]) + 1.5, g[1], ha="center", fontsize=8); ax.text(x + w / 2, int(g[2]) + 1.5, g[2], ha="center", fontsize=8)
+    ax.set_xticks(list(xs)); ax.set_xticklabels(short, fontsize=8); ax.set_ylim(0, 110); ax.legend(frameon=False, fontsize=8, ncol=3, loc="upper left")
+    ax.set_title(CX["cpu"], loc="left", fontsize=10); fig.tight_layout(); fig.savefig(f"{out}/perf_cpu.png", dpi=170); plt.close(fig)
 print("ok")
