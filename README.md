@@ -30,12 +30,52 @@ under test is Check Point).
 
 ## Quick start
 
-On the **test server** (Linux host with Docker). `SERVER_IP` is the server's **workload IP** (the one the clients
+### Hosts and Docker
+
+One Linux host per environment (any distribution with Docker Engine; 2 vCPU / 4 GB is enough, more on the
+performance client) plus the test server, which can share a host with one of the clients. Each host needs outbound
+HTTPS to `ghcr.io` to pull the image (and to the Docker repository while installing). Install Docker Engine:
+
+```bash
+# Ubuntu / Debian (Docker's repository; replace "ubuntu" with "debian" on Debian)
+sudo apt-get update && sudo apt-get install -y ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
+sudo apt-get update && sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+
+# RHEL / Rocky / Alma (Docker's repository)
+sudo dnf -y install dnf-plugins-core
+sudo dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+sudo dnf install -y docker-ce docker-ce-cli containerd.io
+
+# Amazon Linux 2023
+sudo dnf install -y docker
+
+# all: start it at boot and let your user run docker without sudo (log out and back in afterwards)
+sudo systemctl enable --now docker
+sudo usermod -aG docker "$USER"
+docker version && docker pull ghcr.io/gdiaz777/cloud-firewall-testkit:latest
+```
+
+No access to `ghcr.io`? Pull the image on a host that has it, `docker save ghcr.io/gdiaz777/cloud-firewall-testkit:latest
+| gzip > testkit.tar.gz`, copy the file and run `gunzip -c testkit.tar.gz | docker load` on each host.
+
+The test traffic must leave through the interface the solution inspects. With one interface nothing needs doing.
+With a management and a workload interface, the route to the other environments (and to the Internet, for the egress
+tests) from the workload IP must use the workload interface; the client uses as source the IP of the interface
+that reaches the server (force it with `-e SRC_IP=<workload IP>`).
+
+### Containers
+
+On the **test server**. `SERVER_IP` is the server's **workload IP** (the one the clients
 reach through the solution); set it when the host has more than one interface (e.g. a management NIC), otherwise the
 first address is used:
 
 ```bash
-docker run -d --name testkit-server --network host -e SERVER_IP=<server workload IP> -v testkit-data:/data \
+docker run -d --name testkit-server --restart unless-stopped --network host -e SERVER_IP=<server workload IP> -v testkit-data:/data \
   ghcr.io/gdiaz777/cloud-firewall-testkit:latest server
 ```
 
@@ -44,7 +84,7 @@ use (e.g. `pro`, `pre`, `dev`): without it the host name is used, and renaming i
 with the client:
 
 ```bash
-docker run -d --name testkit-client --network host --cap-add NET_RAW --cap-add NET_ADMIN \
+docker run -d --name testkit-client --restart unless-stopped --network host --cap-add NET_RAW --cap-add NET_ADMIN \
   -e SERVER=<server workload IP> -e TESTKIT_ENV=<environment name> ghcr.io/gdiaz777/cloud-firewall-testkit:latest client
 ```
 
@@ -52,7 +92,7 @@ On every client host **except the test server's**, also run the server without t
 it as a target (cross-AZ peer, IDS target, east-west reachability between environments):
 
 ```bash
-docker run -d --name testkit-target --network host -e PORTAL=0 -e SERVER_IP=<this host's workload IP> \
+docker run -d --name testkit-target --restart unless-stopped --network host -e PORTAL=0 -e SERVER_IP=<this host's workload IP> \
   -v testkit-data:/data ghcr.io/gdiaz777/cloud-firewall-testkit:latest server
 ```
 

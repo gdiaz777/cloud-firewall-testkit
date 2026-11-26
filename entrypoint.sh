@@ -40,7 +40,8 @@ server)
   # 200 MB of random data for the throughput measurements (PERF-02/08): generated at start-up, not in the image
   mkdir -p /srv/www/perf && [ -s /srv/www/perf/200m.bin ] || head -c 200M /dev/urandom > /srv/www/perf/200m.bin
   if [ "${PORTAL:-1}" = 1 ]; then python3 /opt/testkit/server/portal/app.py & fi
-  echo "server ready on $SERVER_IP — portal: http://$SERVER_IP/portal/"
+  if [ "${PORTAL:-1}" = 1 ]; then echo "server ready on $SERVER_IP — portal: http://$SERVER_IP/portal/"
+  else echo "target server ready on $SERVER_IP (no portal: PORTAL=0)"; fi
   exec nginx -c /opt/testkit/server/nginx.conf -g 'daemon off;'
   ;;
 client)

@@ -32,12 +32,53 @@ además sus buenas prácticas).
 
 ## Puesta en marcha
 
-En el **servidor de pruebas** (Linux con Docker). `SERVER_IP` es la **IP de workload** del servidor (la que los
+### Equipos y Docker
+
+Un equipo Linux por entorno (cualquier distribución con Docker Engine; 2 vCPU / 4 GB bastan, algo más en el cliente de
+rendimiento) y el servidor de pruebas, que puede compartir equipo con uno de los clientes. Cada equipo necesita salida
+HTTPS a `ghcr.io` para descargar la imagen (y al repositorio de Docker durante la instalación). Instala Docker Engine:
+
+```bash
+# Ubuntu / Debian (repositorio de Docker; en Debian cambia "ubuntu" por "debian")
+sudo apt-get update && sudo apt-get install -y ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
+sudo apt-get update && sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+
+# RHEL / Rocky / Alma (repositorio de Docker)
+sudo dnf -y install dnf-plugins-core
+sudo dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+sudo dnf install -y docker-ce docker-ce-cli containerd.io
+
+# Amazon Linux 2023
+sudo dnf install -y docker
+
+# todos: arranque con el sistema y docker sin sudo para tu usuario (cierra la sesión y vuelve a entrar después)
+sudo systemctl enable --now docker
+sudo usermod -aG docker "$USER"
+docker version && docker pull ghcr.io/gdiaz777/cloud-firewall-testkit:latest
+```
+
+¿Sin acceso a `ghcr.io`? Descarga la imagen en un equipo que lo tenga, `docker save
+ghcr.io/gdiaz777/cloud-firewall-testkit:latest | gzip > testkit.tar.gz`, copia el fichero y ejecuta
+`gunzip -c testkit.tar.gz | docker load` en cada equipo.
+
+El tráfico de prueba debe salir por la interfaz que inspecciona la solución. Con una sola interfaz no hay que hacer
+nada. Con una interfaz de gestión y otra de workload, la ruta hacia los demás entornos (y hacia Internet, para las
+pruebas de salida) desde la IP de workload debe usar la interfaz de workload; el cliente usa como origen la IP de la
+interfaz por la que llega al servidor (fuérzala con `-e SRC_IP=<IP de workload>`).
+
+### Contenedores
+
+En el **servidor de pruebas**. `SERVER_IP` es la **IP de workload** del servidor (la que los
 clientes alcanzan a través de la solución); ponla si el equipo tiene más de una interfaz (p. ej. una de gestión), si no
 se usa la primera:
 
 ```bash
-docker run -d --name testkit-server --network host -e SERVER_IP=<IP de workload del servidor> -v testkit-data:/data \
+docker run -d --name testkit-server --restart unless-stopped --network host -e SERVER_IP=<IP de workload del servidor> -v testkit-data:/data \
   ghcr.io/gdiaz777/cloud-firewall-testkit:latest server
 ```
 
@@ -46,7 +87,7 @@ En cada **cliente** (uno por segmento o entorno). `TESTKIT_ENV` es el nombre de 
 cliente:
 
 ```bash
-docker run -d --name testkit-client --network host --cap-add NET_RAW --cap-add NET_ADMIN \
+docker run -d --name testkit-client --restart unless-stopped --network host --cap-add NET_RAW --cap-add NET_ADMIN \
   -e SERVER=<IP de workload del servidor> -e TESTKIT_ENV=<nombre del entorno> ghcr.io/gdiaz777/cloud-firewall-testkit:latest client
 ```
 
@@ -54,7 +95,7 @@ En cada equipo cliente **salvo el del servidor de pruebas**, arranca también el
 lo usan como destino (par de otra AZ, destino IDS, alcance este-oeste entre entornos):
 
 ```bash
-docker run -d --name testkit-target --network host -e PORTAL=0 -e SERVER_IP=<IP de workload de este equipo> \
+docker run -d --name testkit-target --restart unless-stopped --network host -e PORTAL=0 -e SERVER_IP=<IP de workload de este equipo> \
   -v testkit-data:/data ghcr.io/gdiaz777/cloud-firewall-testkit:latest server
 ```
 
