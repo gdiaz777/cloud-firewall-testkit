@@ -92,7 +92,11 @@ api set-access-rule "{\"name\":\"Cleanup rule\",\"layer\":\"$IL\",\"track\":{\"t
 log "Threat Prevention profiles"
 AV='{"protected-scope":{"inspect-files":"outgoing_and_incoming","incoming-interfaces":"all"},"filetypes-to-process":"all_file_types","archives":{"archive-scanning":true}}'
 prof() { exists threat-profile "$1" || api add-threat-profile "{\"name\":\"$1\",\"active-protections-performance-impact\":\"high\",\"active-protections-severity\":\"Low or above\",\"confidence-level-high\":\"$2\",\"confidence-level-medium\":\"$2\",\"confidence-level-low\":\"$2\",\"ips\":true,\"anti-bot\":$3,\"anti-virus\":true,\"threat-emulation\":false,\"threat-extraction\":false,\"ips-settings\":{\"newly-updated-protections\":\"$4\"},$TAGS}"
-  api set-threat-profile "{\"name\":\"$1\",\"anti-virus-settings\":$AV}"; }
+  local r; r=$(cp set-threat-profile "{\"name\":\"$1\",\"anti-virus-settings\":$AV}")
+  if jq -e '.code=="generic_err_invalid_parameter_name"' >/dev/null 2>&1 <<<"$r"; then   # older API (seen on R82.10, API 2.1)
+    warn "$1: this management's API cannot set the Anti-Virus scope; in SmartConsole set the profile's Anti-Virus to inspect incoming and outgoing files on all interfaces, all file types, archives"
+  elif jq -e '.code' >/dev/null 2>&1 <<<"$r"; then printf '   %-30s %s\n' set-threat-profile "$(jq -r '[.code,.message]|join(" | ")' <<<"$r")"
+  else ok "set-threat-profile $1 (Anti-Virus scope)"; fi; }
 prof $EW Prevent false active
 prof $ST Prevent true active
 prof $DT Detect true staging

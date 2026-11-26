@@ -28,7 +28,8 @@ python3 control/agent.py run HA-01       # one-off from the CLI
   "aws":  {"region": "eu-west-1", "asg_name": "<gateways Auto Scaling group>", "cme_role_arn": "<role the management uses>",
            "env_file": "<optional file with temporary AWS_* credentials, re-read before every check>"},
   "mgmt": {"url": "https://<management>/web_api", "api_key_env": "MGMT_API_KEY", "package": "FW_Testkit",
-           "gateway_prefix": "<only gateways with this prefix are touched>", "post_provision_cmd": "<optional>"},
+           "gateway_prefix": "<only gateways with this prefix are touched>", "post_provision_cmd": "<optional>",
+           "tls_cert": "<optional: PEM of a self-signed management certificate>"},
   "ha":   {"max_outage_s": 60, "isolation_s": 240, "provision_timeout_s": 2700},
   "state_dir": "~/.testkit-control"
 }
@@ -37,7 +38,9 @@ python3 control/agent.py run HA-01       # one-off from the CLI
 Where each value comes from: `asg_name` is the Auto Scaling group of the gateways (EC2 → Auto Scaling groups);
 `cme_role_arn` the IAM role the management (CME) assumes to read the account; `gateway_prefix` the prefix of the gateway
 objects created by the management (e.g. `<CME account name>--`); `post_provision_cmd` an optional command run when a new
-gateway already has its policy (environment `TK_GATEWAY`, `TK_SINCE`). AWS credentials come from the usual chain
+gateway already has its policy (environment `TK_GATEWAY`, `TK_SINCE`); `tls_cert` (or `MGMT_TLS_CERT`) the certificate of a
+self-hosted management whose self-signed certificate does not match the URL (e.g. reached by its public IP): the
+connection is accepted only if the management presents exactly that certificate. AWS credentials come from the usual chain
 (environment, profile, instance role) or from `env_file`. `PORTAL_URL` is the portal address reachable from this host;
 the agent shows up as `CONTROL` in the portal and **Run all** includes its checks.
 

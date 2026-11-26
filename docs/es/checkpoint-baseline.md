@@ -24,6 +24,10 @@ cd checkpoint
 ./cp-baseline.sh remove [--gateways-prefix <prefijo>]           # borra el paquete y todos los objetos TK_
 ```
 
+Gestión propia con certificado autofirmado cuyo nombre no coincide con la URL (p. ej. accedida por su IP pública): indica
+a `setup` el certificado (PEM, p. ej. `openssl s_client -connect <ip>:443 </dev/null | openssl x509 > mgmt.pem`) o define
+`MGMT_TLS_CERT`; se fija su clave pública en lugar de comprobar el nombre.
+
 `apply` también admite un fichero (`--config fichero.json --testkit-ca ca.crt`) si el portal no es accesible. Con
 `--push-ca` sube la CA de HTTPS Inspection a la Configuración del portal, para que los clientes confíen en ella y las
 pruebas TLS sepan qué certificados se descifraron. Repetir `apply` es seguro: crea lo que falte y reordena las reglas.

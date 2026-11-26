@@ -19,6 +19,13 @@ load_settings() {
     set -a; . "$SETTINGS"; set +a
   fi
   PKG=${POLICY_PACKAGE:-FW_Testkit}
+  # Self-signed management certificate whose name does not match MGMT_URL (e.g. a management reached by its public
+  # IP): MGMT_TLS_CERT=<PEM file of that certificate> pins its public key instead of checking the name.
+  CURL_TLS=()
+  if [ -n "${MGMT_TLS_CERT:-}" ]; then
+    [ -s "$MGMT_TLS_CERT" ] || die "MGMT_TLS_CERT not found: $MGMT_TLS_CERT"
+    CURL_TLS=(-k --pinnedpubkey "sha256//$(openssl x509 -in "$MGMT_TLS_CERT" -pubkey -noout | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | base64)")
+  fi
 }
 lab() { [ -s "$CONFIG" ] || die "no configuration: $CONFIG"; jq -r "$@" "$CONFIG"; }
 
@@ -27,12 +34,12 @@ lab() { [ -s "$CONFIG" ] || die "no configuration: $CONFIG"; jq -r "$@" "$CONFIG
 SID_FILE="$OUT/.sid.$$"
 cp_login() {
   local r; r=$(jq -n --arg k "$MGMT_API_KEY" '{"api-key":$k,"session-name":"firewall-testkit-baseline","session-timeout":3600}' \
-    | curl -sS -X POST -H 'Content-Type: application/json' --data @- "$MGMT_URL/login")
+    | curl -sS "${CURL_TLS[@]}" -X POST -H 'Content-Type: application/json' --data @- "$MGMT_URL/login")
   (umask 077; jq -r '.sid // empty' <<<"$r" > "$SID_FILE")
   [ -s "$SID_FILE" ] || { echo "login failed: $(jq -c 'del(.sid)' <<<"$r" 2>/dev/null || echo "$r" | head -c 200)" >&2; return 1; }
   MGMT_API_VERSION=$(jq -r '."api-server-version"' <<<"$r")
 }
-cp() { curl -sS -X POST -H 'Content-Type: application/json' -H "X-chkp-sid: $(cat "$SID_FILE")" --data "${2:-{\}}" "$MGMT_URL/$1"; }
+cp() { curl -sS "${CURL_TLS[@]}" -X POST -H 'Content-Type: application/json' -H "X-chkp-sid: $(cat "$SID_FILE")" --data "${2:-{\}}" "$MGMT_URL/$1"; }
 wait_task() {
   local s i; for i in $(seq 1 $(( ${2:-600} / 5 ))); do
     s=$(cp show-task "{\"task-id\":\"$1\"}" | jq -r '.tasks[0].status'); [ "$s" != "in progress" ] && break; sleep 5; done; echo "$s"; }

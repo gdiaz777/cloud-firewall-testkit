@@ -23,6 +23,10 @@ cd checkpoint
 ./cp-baseline.sh remove [--gateways-prefix <prefix>]           # delete the package and every TK_ object
 ```
 
+A self-hosted management with a self-signed certificate whose name does not match the URL (e.g. reached by its public
+IP): give `setup` the certificate (PEM, e.g. `openssl s_client -connect <ip>:443 </dev/null | openssl x509 > mgmt.pem`)
+or set `MGMT_TLS_CERT`; its public key is pinned instead of checking the name.
+
 `apply` can also take a configuration file (`--config file.json --testkit-ca ca.crt`) when the portal is not reachable.
 With `--push-ca` the HTTPS Inspection CA is uploaded to the portal settings, so clients trust it and the TLS checks
 know which certificates were decrypted. Re-running `apply` is safe: missing objects are created and rules are put back

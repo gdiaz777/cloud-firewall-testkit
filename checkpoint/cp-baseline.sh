@@ -26,8 +26,10 @@ setup)
   ask MGMT_URL "Management web API URL" ""; MGMT_URL=${MGMT_URL%/}; MGMT_URL=${MGMT_URL%/login}
   ask MGMT_API_KEY "API key" "" secret
   ask POLICY_PACKAGE "Policy package to create" "${POLICY_PACKAGE:-FW_Testkit}"
+  ask MGMT_TLS_CERT "Management certificate (PEM) to pin when it is self-signed / its name does not match the URL; empty = normal check" "${MGMT_TLS_CERT:-}"
+  load_settings
   cp_login && ok "login OK (Management API $MGMT_API_VERSION)" || die "cannot log in to $MGMT_URL"; cp_logout
-  umask 077; printf 'MGMT_URL=%s\nMGMT_API_KEY=%s\nPOLICY_PACKAGE=%s\n' "$MGMT_URL" "$MGMT_API_KEY" "$POLICY_PACKAGE" > "$SETTINGS"
+  umask 077; printf 'MGMT_URL=%s\nMGMT_API_KEY=%s\nPOLICY_PACKAGE=%s\nMGMT_TLS_CERT=%s\n' "$MGMT_URL" "$MGMT_API_KEY" "$POLICY_PACKAGE" "$MGMT_TLS_CERT" > "$SETTINGS"
   ok "saved to checkpoint/settings.env (not versioned)";;
 
 apply)

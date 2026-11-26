@@ -2,12 +2,14 @@
 
 Settings (CONTROL_CONFIG):  mgmt.url (…/web_api), mgmt.api_key_env (name of the variable with the API key, default
 MGMT_API_KEY), mgmt.package (policy package, default FW_Testkit), mgmt.gateway_prefix (only these gateways are touched:
-run-script and policy installation), mgmt.access_layer (default "<package> Network"), state_dir (policy baseline).
+run-script and policy installation), mgmt.access_layer (default "<package> Network"), mgmt.tls_cert (or MGMT_TLS_CERT:
+PEM of a self-signed management certificate whose name does not match mgmt.url; the connection is accepted only when
+the server presents exactly that certificate), state_dir (policy baseline).
 
 Changes made by a check (temporary rule, IoC, probe objects) are published and installed only on the gateways of the
 prefix and always removed at the end. Nothing global is changed.
 """
-import json, os, re, time, urllib.error, urllib.request
+import atexit, http.client, io, json, os, re, ssl, threading, time, urllib.error, urllib.parse, urllib.request
 from control.agent import Skip, hook, log
 
 PROTECTED_INSTALL_TRIES = 10
@@ -20,21 +22,51 @@ class Mgmt:
         self.key = os.environ.get(ctx.setting("mgmt.api_key_env", "MGMT_API_KEY"), "")
         self.pkg = ctx.setting("mgmt.package", "FW_Testkit")
         self.prefix = ctx.setting("mgmt.gateway_prefix", "")
+        cert = ctx.setting("mgmt.tls_cert") or os.environ.get("MGMT_TLS_CERT", "")
+        self.pin = ssl.PEM_cert_to_DER_cert(open(os.path.expanduser(cert)).read()) if cert else None
         if not self.url or not self.key:
             raise Skip("not configured: mgmt.url / management API key")
         self.sid = None
 
+    # One session per management, reused by every check: some managements (e.g. a self-hosted R82.10) rate-limit
+    # logins (HTTP 429), and the wait loops query the management every few seconds. Closed when the agent exits.
+    _sessions, _lock = {}, threading.Lock()
+
     def __enter__(self):
+        with Mgmt._lock:   # HA checks query the management from a watcher thread too
+            return self._enter()
+
+    def _enter(self):
+        sid = Mgmt._sessions.get(self.url)
+        if sid:
+            self.sid = sid
+            try:
+                if not self._post("keepalive", {}).get("code"):
+                    return self
+            except Exception:  # noqa  (expired / invalid session: log in again)
+                pass
+            Mgmt._sessions.pop(self.url, None); self.sid = None
         r = self._post("login", {"api-key": self.key, "session-name": "testkit-control", "session-timeout": 3600})
-        self.sid = r["sid"]; return self
+        self.sid = Mgmt._sessions[self.url] = r["sid"]
+        if len(Mgmt._sessions) == 1:
+            atexit.register(Mgmt._logout_all, self)
+        return self
 
     def __exit__(self, et, ev, tb):
-        try:
-            if et is not None:
-                self._post("discard", {})
-            self._post("logout", {})
+        if et is None:
+            return
+        try:   # a failed check must not leave unpublished changes in the shared session
+            self._post("discard", {})
         except Exception:  # noqa
-            pass
+            Mgmt._sessions.pop(self.url, None)
+
+    def _logout_all(self):
+        for url, sid in list(Mgmt._sessions.items()):
+            try:
+                self.url, self.sid = url, sid; self._post("logout", {})
+            except Exception:  # noqa
+                pass
+        Mgmt._sessions.clear()
 
     def _post(self, cmd, body):
         h = {"Content-Type": "application/json"}
@@ -43,16 +75,38 @@ class Mgmt:
         req = urllib.request.Request(f"{self.url}/{cmd}", data=json.dumps(body).encode(), headers=h)
         for i in range(12):   # transient gateway errors of the management front end (502/503/504, timeouts): retry
             try:
+                if self.pin:
+                    return json.loads(self._pinned(req) or b"{}")
                 with urllib.request.urlopen(req, timeout=120) as f:
                     return json.loads(f.read() or b"{}")
             except urllib.error.HTTPError as e:
-                if e.code in (502, 503, 504) and i < 11:
-                    log(f"management {cmd}: HTTP {e.code}, retrying"); time.sleep(20); continue
+                if e.code in (429, 502, 503, 504) and i < 11:   # 429: login rate limit of the management
+                    log(f"management {cmd}: HTTP {e.code}, retrying"); time.sleep(30 if e.code == 429 else 20); continue
                 raise RuntimeError(f"{cmd}: HTTP {e.code} {e.read().decode(errors='replace')[:300]}") from None
             except (urllib.error.URLError, TimeoutError) as e:
                 if i < 11:
                     log(f"management {cmd}: {e}, retrying"); time.sleep(20); continue
                 raise RuntimeError(f"{cmd}: {e}") from None
+
+    def _pinned(self, req):
+        """POST to a management with a pinned self-signed certificate (mgmt.tls_cert)."""
+        u = urllib.parse.urlsplit(req.full_url)
+        c = http.client.HTTPSConnection(u.hostname, u.port or 443, timeout=120, context=ssl._create_unverified_context())
+        try:
+            c.connect()
+            if c.sock.getpeercert(binary_form=True) != self.pin:
+                raise RuntimeError("the management certificate does not match mgmt.tls_cert")
+            c.request("POST", u.path, req.data, dict(req.header_items()))
+            r = c.getresponse(); data = r.read()
+            if r.status >= 400:
+                raise urllib.error.HTTPError(req.full_url, r.status, r.reason, r.headers, io.BytesIO(data))
+            return data
+        except (OSError, http.client.HTTPException) as e:
+            if isinstance(e, urllib.error.HTTPError):
+                raise
+            raise urllib.error.URLError(e) from None
+        finally:
+            c.close()
 
     def call(self, cmd, body=None):
         return self._post(cmd, body or {})

@@ -22,11 +22,25 @@ python3 control/agent.py                 # modo agente («Ejecutar todo» en el 
 python3 control/agent.py run HA-01       # puntual desde la línea de comandos
 ```
 
-El fichero `control.json` tiene el mismo formato que en la [versión en inglés](../en/control-agent.md#run-it). De dónde
-sale cada dato: `asg_name` es el grupo de autoescalado de los gateways (EC2 → Auto Scaling groups); `cme_role_arn` el rol
+Fichero `control.json`:
+
+```json
+{
+  "aws":  {"region": "eu-west-1", "asg_name": "<grupo de autoescalado de los gateways>", "cme_role_arn": "<rol que usa la gestión>",
+           "env_file": "<opcional: fichero con credenciales AWS_* temporales, se relee antes de cada prueba>"},
+  "mgmt": {"url": "https://<gestión>/web_api", "api_key_env": "MGMT_API_KEY", "package": "FW_Testkit",
+           "gateway_prefix": "<solo se tocan los gateways con este prefijo>", "post_provision_cmd": "<opcional>"},
+  "ha":   {"max_outage_s": 60, "isolation_s": 240, "provision_timeout_s": 2700},
+  "state_dir": "~/.testkit-control"
+}
+```
+
+De dónde sale cada dato: `asg_name` es el grupo de autoescalado de los gateways (EC2 → Auto Scaling groups); `cme_role_arn` el rol
 IAM que asume la gestión (CME) para leer la cuenta; `gateway_prefix` el prefijo de los objetos gateway que crea la gestión
 (p. ej. `<nombre de la cuenta de CME>--`); `post_provision_cmd` un comando opcional que se ejecuta cuando un gateway nuevo
-ya tiene su política (variables `TK_GATEWAY`, `TK_SINCE`). Las credenciales de AWS salen de la cadena habitual
+ya tiene su política (variables `TK_GATEWAY`, `TK_SINCE`); `tls_cert` (o `MGMT_TLS_CERT`) el certificado de una gestión
+propia con certificado autofirmado que no coincide con la URL (p. ej. accedida por su IP pública): la conexión solo se
+acepta si la gestión presenta exactamente ese certificado. Las credenciales de AWS salen de la cadena habitual
 (variables, perfil, rol de instancia) o de `env_file`. `PORTAL_URL` es la dirección del portal alcanzable desde este
 equipo; el agente aparece como `CONTROL` en el portal y **Ejecutar todo** incluye sus pruebas.
 
