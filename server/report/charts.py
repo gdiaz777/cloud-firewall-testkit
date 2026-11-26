@@ -38,7 +38,10 @@ fig, ax = plt.subplots(figsize=(6.4, 3.2))
 if keys:
     ax.pie([c[k] for k in keys], colors=[COL[k] for k in keys], startangle=90, counterclock=False, wedgeprops=dict(width=0.38, edgecolor="white"))
 okp = 100 * c["OK"] / max(1, c["OK"] + c["FAIL"] + c["ERROR"])
-ax.text(0, 0.08, f"{okp:.0f} %", ha="center", va="center", fontsize=22, fontweight="bold", color="#1f2937")
+# rounded DOWN to one decimal: 712/715 must not read "100 %" while there are unexpected results
+okp = int(okp * 10) / 10
+okt = f"{okp:.0f}" if okp == int(okp) else (f"{okp:.1f}".replace(".", ",") if L == "es" else f"{okp:.1f}")
+ax.text(0, 0.08, f"{okt} %", ha="center", va="center", fontsize=22, fontweight="bold", color="#1f2937")
 ax.text(0, -0.2, TX["asexp"], ha="center", va="center", fontsize=9, color="#6b7280")
 ax.legend([f"{LBL[k]} ({c[k]})" for k in keys], loc="center left", bbox_to_anchor=(1, 0.5), frameon=False)
 ax.set_title(f"{sum(c[k] for k in keys)} {TX['run']}", loc="left", fontsize=11, color="#1f2937")
